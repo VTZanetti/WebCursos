@@ -2,23 +2,71 @@ import axios from 'axios'
 
 // Configuração base do axios
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  // Use relative URLs to work with Vite proxy
+  baseURL: '/api',  // This will be proxied to http://localhost:5000/api
   headers: {
     'Content-Type': 'application/json'
   },
-  timeout: 10000
+  timeout: 15000,  // Increased timeout for better reliability
+  withCredentials: false
 })
 
-// Interceptor para tratar respostas
+// Enhanced interceptor for better error handling
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Log successful responses in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`✅ API Success: ${response.config.method?.toUpperCase()} ${response.config.url}`, response.data)
+    }
+    return response
+  },
   (error) => {
-    console.error('API Error:', error.response?.data || error.message)
-    return Promise.reject(error)
+    // Enhanced error logging
+    const errorDetails = {
+      url: error.config?.url,
+      method: error.config?.method?.toUpperCase(),
+      status: error.response?.status,
+      message: error.response?.data?.error || error.message,
+      data: error.response?.data
+    }
+    
+    console.error('❌ API Error:', errorDetails)
+    
+    // Return enhanced error with user-friendly messages
+    const enhancedError = new Error()
+    enhancedError.originalError = error
+    enhancedError.status = error.response?.status
+    enhancedError.serverMessage = error.response?.data?.error
+    enhancedError.userMessage = getUserFriendlyMessage(error)
+    
+    return Promise.reject(enhancedError)
   }
 )
 
-// Serviços da API
+// Function to generate user-friendly error messages
+function getUserFriendlyMessage(error) {
+  const status = error.response?.status
+  const serverMessage = error.response?.data?.error
+  
+  if (!error.response) {
+    return 'Não foi possível conectar ao servidor. Verifique sua conexão com a internet e se o backend está rodando.'
+  }
+  
+  switch (status) {
+    case 400:
+      return serverMessage || 'Dados inválidos enviados para o servidor.'
+    case 404:
+      return serverMessage || 'Recurso não encontrado.'
+    case 500:
+      return serverMessage || 'Erro interno do servidor. Tente novamente em alguns momentos.'
+    case 503:
+      return 'Servidor temporariamente indisponível. Tente novamente em alguns momentos.'
+    default:
+      return serverMessage || `Erro no servidor (${status}). Tente novamente.`
+  }
+}
+
+// Serviços da API com tratamento robusto de erros
 export const apiService = {
   // ===== CURSOS =====
   
@@ -28,7 +76,8 @@ export const apiService = {
       const response = await api.get('/cursos')
       return response.data
     } catch (error) {
-      throw new Error(`Erro ao buscar cursos: ${error.message}`)
+      const message = error.userMessage || 'Erro ao carregar lista de cursos'
+      throw new Error(message)
     }
   },
 
@@ -38,10 +87,11 @@ export const apiService = {
       const response = await api.get(`/cursos/${id}`)
       return response.data
     } catch (error) {
-      if (error.response?.status === 404) {
+      if (error.status === 404) {
         throw new Error('Curso não encontrado')
       }
-      throw new Error(`Erro ao buscar curso: ${error.message}`)
+      const message = error.userMessage || 'Erro ao carregar detalhes do curso'
+      throw new Error(message)
     }
   },
 
@@ -51,10 +101,12 @@ export const apiService = {
       const response = await api.post('/cursos', cursoData)
       return response.data
     } catch (error) {
-      if (error.response?.status === 400) {
-        throw new Error('Dados do curso inválidos')
+      if (error.status === 400) {
+        const message = error.serverMessage || 'Dados do curso inválidos'
+        throw new Error(message)
       }
-      throw new Error(`Erro ao criar curso: ${error.message}`)
+      const message = error.userMessage || 'Erro ao criar novo curso'
+      throw new Error(message)
     }
   },
 
@@ -64,13 +116,15 @@ export const apiService = {
       const response = await api.put(`/cursos/${id}`, cursoData)
       return response.data
     } catch (error) {
-      if (error.response?.status === 404) {
+      if (error.status === 404) {
         throw new Error('Curso não encontrado')
       }
-      if (error.response?.status === 400) {
-        throw new Error('Dados do curso inválidos')
+      if (error.status === 400) {
+        const message = error.serverMessage || 'Dados do curso inválidos'
+        throw new Error(message)
       }
-      throw new Error(`Erro ao atualizar curso: ${error.message}`)
+      const message = error.userMessage || 'Erro ao atualizar curso'
+      throw new Error(message)
     }
   },
 
@@ -80,10 +134,11 @@ export const apiService = {
       const response = await api.delete(`/cursos/${id}`)
       return response.data
     } catch (error) {
-      if (error.response?.status === 404) {
+      if (error.status === 404) {
         throw new Error('Curso não encontrado')
       }
-      throw new Error(`Erro ao deletar curso: ${error.message}`)
+      const message = error.userMessage || 'Erro ao excluir curso'
+      throw new Error(message)
     }
   },
 
@@ -98,13 +153,15 @@ export const apiService = {
       })
       return response.data
     } catch (error) {
-      if (error.response?.status === 404) {
+      if (error.status === 404) {
         throw new Error('Curso não encontrado')
       }
-      if (error.response?.status === 400) {
-        throw new Error('Número de aula inválido')
+      if (error.status === 400) {
+        const message = error.serverMessage || 'Número de aula inválido'
+        throw new Error(message)
       }
-      throw new Error(`Erro ao atualizar aula: ${error.message}`)
+      const message = error.userMessage || 'Erro ao atualizar progresso da aula'
+      throw new Error(message)
     }
   },
 
@@ -116,7 +173,8 @@ export const apiService = {
       const response = await api.get('/stats')
       return response.data
     } catch (error) {
-      throw new Error(`Erro ao buscar estatísticas: ${error.message}`)
+      const message = error.userMessage || 'Erro ao carregar estatísticas'
+      throw new Error(message)
     }
   },
 
@@ -126,7 +184,8 @@ export const apiService = {
       const response = await api.get('/health')
       return response.data
     } catch (error) {
-      throw new Error(`API não está respondendo: ${error.message}`)
+      const message = error.userMessage || 'Servidor não está respondendo'
+      throw new Error(message)
     }
   }
 }

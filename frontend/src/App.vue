@@ -117,21 +117,57 @@ export default {
 
     async checkApiConnection() {
       try {
-        await apiService.healthCheck()
+        const result = await apiService.healthCheck()
         this.isApiOnline = true
         this.appError = null
         
         if (!this.isLoading) {
           this.showGlobalNotification('Conexão com API restabelecida', 'success')
         }
+        
+        return result
       } catch (error) {
         this.isApiOnline = false
         
+        // Enhanced error analysis
+        const errorMessage = this.analyzeConnectionError(error)
+        
         if (this.isLoading) {
+          this.appError = errorMessage
           throw error
         } else {
-          this.showGlobalNotification('Conexão com API perdida', 'error')
+          this.showGlobalNotification(errorMessage, 'error')
         }
+      }
+    },
+
+    analyzeConnectionError(error) {
+      // Check if it's a network error (no response)
+      if (!error.response) {
+        if (error.code === 'NETWORK_ERROR' || error.message.includes('Network Error')) {
+          return 'Erro de rede: Verifique sua conexão com a internet'
+        }
+        if (error.code === 'ECONNREFUSED' || error.message.includes('refused')) {
+          return 'Backend não está rodando: Inicie o servidor Flask na porta 5000'
+        }
+        if (error.code === 'TIMEOUT' || error.message.includes('timeout')) {
+          return 'Timeout: Servidor demorou para responder'
+        }
+        return 'Não foi possível conectar ao servidor. Verifique se o backend está rodando.'
+      }
+      
+      // Server responded with an error
+      const status = error.response.status
+      switch (status) {
+        case 404:
+          return 'API endpoint não encontrado: Verifique a URL do backend'
+        case 500:
+          return 'Erro interno do servidor: Verifique os logs do backend'
+        case 502:
+        case 503:
+          return 'Servidor indisponível: Tente novamente em alguns momentos'
+        default:
+          return `Erro do servidor (${status}): ${error.response?.data?.error || 'Erro desconhecido'}`
       }
     },
 

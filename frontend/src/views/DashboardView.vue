@@ -594,31 +594,6 @@ export default {
   padding: 20px;
 }
 
-.delete-modal {
-  background: white;
-  border-radius: 12px;
-  padding: 32px;
-  max-width: 400px;
-  text-align: center;
-}
-
-.delete-icon {
-  font-size: 3rem;
-  margin-bottom: 16px;
-}
-
-.delete-warning {
-  color: #ef4444;
-  font-size: 0.875rem;
-  margin-top: 8px;
-}
-
-.delete-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 24px;
-}
-
 .notification {
   position: fixed;
   top: 20px;

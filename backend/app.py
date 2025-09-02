@@ -1,49 +1,127 @@
 from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import sqlite3
 import os
+import logging
 from datetime import datetime
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Inicialização do Flask
 app = Flask(__name__)
 
-# Configuração do CORS para permitir requisições do frontend
-CORS(app, origins=['http://localhost:3000', 'http://localhost:8080', 'http://127.0.0.1:3000', 'http://127.0.0.1:8080'])
+# Configuração robusta do CORS para Vue.js dev server
+CORS(app, resources={
+    r"/api/*": {
+        "origins": [
+            "http://localhost:5173",  # Vite default port
+            "http://127.0.0.1:5173", # Alternative localhost
+            "http://localhost:3000",  # Backup port
+            "http://127.0.0.1:3000"  # Backup alternative
+        ],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "Accept"]
+    }
+})
 
 # Configurações do banco de dados
 DATABASE_PATH = os.path.join(os.path.dirname(__file__), 'instance', 'database.sqlite')
 
+# ===============================
+# HELPER FUNCTIONS
+# ===============================
+
+def create_error_response(message, status_code=500, details=None):
+    """
+    Cria uma resposta de erro padronizada.
+    """
+    error_data = {
+        'success': False,
+        'error': message,
+        'timestamp': datetime.now().isoformat()
+    }
+    
+    if details:
+        error_data['details'] = details
+        
+    if status_code >= 500:
+        logger.error(f"Server Error {status_code}: {message} - Details: {details}")
+    else:
+        logger.warning(f"Client Error {status_code}: {message}")
+        
+    return jsonify(error_data), status_code
+
+def create_success_response(data, message=None, status_code=200):
+    """
+    Cria uma resposta de sucesso padronizada.
+    """
+    response_data = {
+        'success': True,
+        'data': data,
+        'timestamp': datetime.now().isoformat()
+    }
+    
+    if message:
+        response_data['message'] = message
+        
+    return jsonify(response_data), status_code
+
 def get_db_connection():
     """
-    Estabelece conexão com o banco de dados SQLite.
+    Estabelece conexão com o banco de dados SQLite com tratamento de erros.
     """
-    conn = sqlite3.connect(DATABASE_PATH)
-    conn.row_factory = sqlite3.Row  # Para acessar colunas por nome
-    return conn
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        conn.row_factory = sqlite3.Row  # Para acessar colunas por nome
+        
+        # Configurar timeout para evitar deadlocks
+        conn.execute('PRAGMA busy_timeout = 30000')  # 30 seconds
+        
+        return conn
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao conectar com o banco de dados: {str(e)}")
+        raise Exception(f"Falha na conexão com o banco de dados: {str(e)}")
+    except Exception as e:
+        logger.error(f"Erro inesperado ao conectar com o banco: {str(e)}")
+        raise Exception(f"Erro interno ao acessar o banco de dados")
 
 def get_curso_aulas_concluidas(cursor, curso_id):
     """
     Retorna o número de aulas concluídas para um curso específico.
     """
-    cursor.execute('''
-        SELECT COUNT(*) as count 
-        FROM aulas_concluidas 
-        WHERE curso_id = ?
-    ''', (curso_id,))
-    result = cursor.fetchone()
-    return result['count'] if result else 0
+    try:
+        cursor.execute('''
+            SELECT COUNT(*) as count 
+            FROM aulas_concluidas 
+            WHERE curso_id = ?
+        ''', (curso_id,))
+        result = cursor.fetchone()
+        return result['count'] if result else 0
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao buscar aulas concluídas para curso {curso_id}: {str(e)}")
+        raise Exception(f"Erro ao consultar aulas concluídas")
 
 def get_aulas_concluidas_list(cursor, curso_id):
     """
     Retorna lista das aulas concluídas para um curso específico.
     """
-    cursor.execute('''
-        SELECT numero_aula 
-        FROM aulas_concluidas 
-        WHERE curso_id = ? 
-        ORDER BY numero_aula
-    ''', (curso_id,))
-    return [row['numero_aula'] for row in cursor.fetchall()]
+    try:
+        cursor.execute('''
+            SELECT numero_aula 
+            FROM aulas_concluidas 
+            WHERE curso_id = ? 
+            ORDER BY numero_aula
+        ''', (curso_id,))
+        return [row['numero_aula'] for row in cursor.fetchall()]
+    except sqlite3.Error as e:
+        logger.error(f"Erro ao buscar lista de aulas concluídas para curso {curso_id}: {str(e)}")
+        raise Exception(f"Erro ao consultar lista de aulas")
 
 # ===============================
 # ENDPOINTS DA API RESTful
@@ -54,7 +132,9 @@ def get_cursos():
     """
     GET /api/cursos - Retorna lista de todos os cursos com número de aulas concluídas.
     """
+    conn = None
     try:
+        logger.info("Buscando lista de cursos")
         conn = get_db_connection()
         cursor = conn.cursor()
         
@@ -78,19 +158,31 @@ def get_cursos():
             
             cursos.append(curso)
         
-        conn.close()
-        
-        return jsonify({
-            'success': True,
-            'data': cursos,
+        logger.info(f"Retornando {len(cursos)} cursos")
+        return create_success_response({
+            'cursos': cursos,
             'count': len(cursos)
-        }), 200
+        })
         
+    except sqlite3.Error as db_error:
+        logger.error(f"Erro no banco de dados ao buscar cursos: {str(db_error)}")
+        return create_error_response(
+            "Erro ao acessar o banco de dados",
+            500,
+            "Falha na consulta dos cursos"
+        )
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'Erro ao buscar cursos: {str(e)}'
-        }), 500
+        logger.error(f"Erro inesperado ao buscar cursos: {str(e)}")
+        return create_error_response(
+            "Erro interno do servidor ao buscar cursos",
+            500
+        )
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception as close_error:
+                logger.error(f"Erro ao fechar conexão: {str(close_error)}")
 
 @app.route('/api/cursos', methods=['POST'])
 def create_curso():
@@ -98,21 +190,39 @@ def create_curso():
     POST /api/cursos - Cria um novo curso.
     Recebe: titulo, link (opcional), total_aulas, anotacoes (opcional)
     """
+    conn = None
     try:
         data = request.get_json()
+        logger.info(f"Tentativa de criar novo curso: {data.get('titulo') if data else 'dados inválidos'}")
         
-        # Validações
-        if not data or 'titulo' not in data or 'total_aulas' not in data:
-            return jsonify({
-                'success': False,
-                'error': 'Campos obrigatórios: titulo, total_aulas'
-            }), 400
+        # Validações de entrada
+        if not data:
+            return create_error_response(
+                "Nenhum dado fornecido",
+                400,
+                "Corpo da requisição vazio ou inválido"
+            )
+            
+        if 'titulo' not in data or not data['titulo']:
+            return create_error_response(
+                "Título é obrigatório",
+                400,
+                "Campo 'titulo' ausente ou vazio"
+            )
+            
+        if 'total_aulas' not in data:
+            return create_error_response(
+                "Total de aulas é obrigatório",
+                400,
+                "Campo 'total_aulas' ausente"
+            )
         
         if not isinstance(data['total_aulas'], int) or data['total_aulas'] < 0:
-            return jsonify({
-                'success': False,
-                'error': 'total_aulas deve ser um número inteiro não negativo'
-            }), 400
+            return create_error_response(
+                "Total de aulas deve ser um número inteiro não negativo",
+                400,
+                f"Valor recebido: {data['total_aulas']}"
+            )
         
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -122,10 +232,10 @@ def create_curso():
             INSERT INTO cursos (titulo, link, total_aulas, anotacoes)
             VALUES (?, ?, ?, ?)
         ''', (
-            data['titulo'],
-            data.get('link', ''),
+            data['titulo'].strip(),
+            data.get('link', '').strip(),
             data['total_aulas'],
-            data.get('anotacoes', '')
+            data.get('anotacoes', '').strip()
         ))
         
         curso_id = cursor.lastrowid
@@ -137,24 +247,49 @@ def create_curso():
             WHERE id = ?
         ''', (curso_id,))
         
-        novo_curso = dict(cursor.fetchone())
+        curso_row = cursor.fetchone()
+        if not curso_row:
+            raise Exception("Falha ao recuperar o curso criado")
+            
+        novo_curso = dict(curso_row)
         novo_curso['aulas_concluidas'] = 0
         novo_curso['progresso'] = 0.0
         
         conn.commit()
-        conn.close()
+        logger.info(f"Curso criado com sucesso: ID {curso_id} - {data['titulo']}")
         
-        return jsonify({
-            'success': True,
-            'data': novo_curso,
-            'message': 'Curso criado com sucesso'
-        }), 201
+        return create_success_response(
+            novo_curso,
+            "Curso criado com sucesso",
+            201
+        )
         
+    except sqlite3.IntegrityError as integrity_error:
+        logger.error(f"Erro de integridade ao criar curso: {str(integrity_error)}")
+        return create_error_response(
+            "Erro de validação dos dados",
+            400,
+            "Possível duplicação de dados ou violação de restrições"
+        )
+    except sqlite3.Error as db_error:
+        logger.error(f"Erro no banco de dados ao criar curso: {str(db_error)}")
+        return create_error_response(
+            "Erro ao salvar curso no banco de dados",
+            500,
+            "Falha na operação de inserção"
+        )
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'Erro ao criar curso: {str(e)}'
-        }), 500
+        logger.error(f"Erro inesperado ao criar curso: {str(e)}")
+        return create_error_response(
+            "Erro interno do servidor ao criar curso",
+            500
+        )
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception as close_error:
+                logger.error(f"Erro ao fechar conexão: {str(close_error)}")
 
 @app.route('/api/cursos/<int:curso_id>', methods=['GET'])
 def get_curso(curso_id):
