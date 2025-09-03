@@ -1,0 +1,2 @@
+# WebCurso Simplified Requirements
+# These are the minimal requirements to run the start.py script

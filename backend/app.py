@@ -214,6 +214,9 @@ def create_curso():
             )
         )
         
+        # Commit the transaction
+        conn.commit()
+        
         # Buscar o curso recém-criado para retornar
         select_query = "SELECT id, titulo, link, total_aulas, anotacoes, created_at, updated_at FROM cursos WHERE id = ?"
         
@@ -492,8 +495,8 @@ def toggle_aula_concluida(curso_id):
         conn.commit()
         
         # Retornar status atualizado do curso
-        total_concluidas = get_curso_aulas_concluidas(cursor, curso_id)
-        aulas_concluidas_list = get_aulas_concluidas_list(cursor, curso_id)
+        total_concluidas = get_curso_aulas_concluidas(conn, curso_id)
+        aulas_concluidas_list = get_aulas_concluidas_list(conn, curso_id)
         
         progresso = 0.0
         if curso['total_aulas'] > 0:

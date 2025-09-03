@@ -276,17 +276,14 @@ export default {
     
     // Para Vue 2 compatibility
     $set(obj, key, value) {
-      if (this.$set) {
-        this.$set(obj, key, value)
-      } else {
+      if (typeof obj === 'object' && obj !== null) {
         obj[key] = value
       }
     },
     
     $delete(obj, key) {
-      if (this.$delete) {
-        this.$delete(obj, key)
-      } else {
+      // Fixed recursive call issue
+      if (typeof obj === 'object' && obj !== null) {
         delete obj[key]
       }
     }

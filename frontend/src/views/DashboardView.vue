@@ -237,8 +237,8 @@ export default {
         ])
         
         // Fix: The API returns data in a nested structure
-        this.cursos = cursosResponse.data?.data?.cursos || []
-        this.stats = statsResponse.data?.data || null
+        this.cursos = cursosResponse.data?.cursos || []
+        this.stats = statsResponse.data || null
         
         console.log('Cursos carregados:', this.cursos.length, 'cursos')
         
@@ -356,7 +356,7 @@ export default {
     async loadStats() {
       try {
         const response = await apiService.getStats()
-        this.stats = response.data.data
+        this.stats = response.data || null
       } catch (error) {
         console.error('Erro ao carregar estatísticas:', error)
       }
