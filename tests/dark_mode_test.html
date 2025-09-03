@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dark Mode Test</title>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --text-primary: #1f2937;
+            --bg-primary: #ffffff;
+            --border-color: #e5e7eb;
+        }
+
+        .dark-mode {
+            --text-primary: #f9fafb;
+            --bg-primary: #111827;
+            --border-color: #4b5563;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border-color);
+        }
+
+        .dark-mode .card {
+            background: rgba(31, 41, 55, 0.95);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            background: var(--primary-color);
+            color: white;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .dark-mode .theme-toggle {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleDarkMode()">🌙</button>
+    
+    <div class="container">
+        <h1>Dark Mode Test Page</h1>
+        
+        <div class="card">
+            <h2>Card Title</h2>
+            <p>This is a sample card to test dark mode styles. The background and text colors should change when dark mode is enabled.</p>
+            <button class="btn">Sample Button</button>
+        </div>
+        
+        <div class="card">
+            <h2>Another Card</h2>
+            <p>This card should also adapt to dark mode. Check that all elements are properly styled.</p>
+            <input type="text" placeholder="Sample input field" style="width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid var(--border-color);">
+        </div>
+    </div>
+
+    <script>
+        // Check for saved theme preference or default to system preference
+        const savedTheme = localStorage.getItem('webcurso-theme');
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        
+        if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+            document.body.classList.add('dark-mode');
+            document.querySelector('.theme-toggle').textContent = '☀️';
+        }
+        
+        function toggleDarkMode() {
+            const isDarkMode = document.body.classList.toggle('dark-mode');
+            localStorage.setItem('webcurso-theme', isDarkMode ? 'dark' : 'light');
+            document.querySelector('.theme-toggle').textContent = isDarkMode ? '☀️' : '🌙';
+        }
+    </script>
+</body>
+</html>

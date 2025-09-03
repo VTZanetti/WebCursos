@@ -397,20 +397,68 @@ export default {
   }
 }
 
-/* Accessibility improvements */
-.btn:focus {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
+/* Explicit dark mode classes */
+.dark-mode .modal-overlay {
+  background: rgba(0, 0, 0, 0.7);
 }
 
-.modal-overlay:focus {
-  outline: none;
+.dark-mode .modal-content {
+  background: #1f2937;
+  color: #f9fafb;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
-/* Print styles */
-@media print {
-  .modal-overlay {
-    display: none;
-  }
+.dark-mode .modal-title {
+  color: #f9fafb;
+}
+
+.dark-mode .modal-message {
+  color: #d1d5db;
+}
+
+.dark-mode .modal-warning {
+  background: #374151;
+  border-color: #4b5563;
+}
+
+.dark-mode .warning-text {
+  color: #f87171;
+}
+
+.dark-mode .modal-item-info {
+  background: #374151;
+  border-color: #4b5563;
+  color: #e5e7eb;
+}
+
+.dark-mode .btn-cancel {
+  background: #374151;
+  color: #e5e7eb;
+  border-color: #4b5563;
+}
+
+.dark-mode .btn-cancel:hover:not(:disabled) {
+  background: #4b5563;
+  border-color: #6b7280;
+}
+
+.dark-mode .btn-confirm {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.dark-mode .btn-confirm:hover:not(:disabled) {
+  background: #991b1b;
+  border-color: #991b1b;
+}
+
+.dark-mode .loading-spinner {
+  border-color: rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+}
+
+.dark-mode .alert-icon {
+  background: linear-gradient(135deg, #374151, #4b5563);
+  border-color: #f87171;
 }
 </style>

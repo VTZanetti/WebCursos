@@ -474,6 +474,94 @@ export default {
   animation: spin 1s linear infinite;
 }
 
+/* Dark mode support */
+.dark-mode .modal-overlay {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.dark-mode .modal-content {
+  background: #1f2937;
+  box-shadow: 0 20px 25px rgba(0, 0, 0, 0.3), 0 10px 10px rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode .modal-title {
+  color: #f9fafb;
+}
+
+.dark-mode .btn-close {
+  color: #9ca3af;
+}
+
+.dark-mode .btn-close:hover {
+  background: #374151;
+  color: #e5e7eb;
+}
+
+.dark-mode .form-label {
+  color: #e5e7eb;
+}
+
+.dark-mode .form-input,
+.dark-mode .form-textarea {
+  background: #1f2937;
+  border-color: #4b5563;
+  color: #f9fafb;
+}
+
+.dark-mode .form-input:focus,
+.dark-mode .form-textarea:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+.dark-mode .input-error {
+  border-color: #ef4444;
+}
+
+.dark-mode .input-error:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.3);
+}
+
+.dark-mode .error-message {
+  color: #f87171;
+}
+
+.dark-mode .form-hint {
+  color: #9ca3af;
+}
+
+.dark-mode .character-count {
+  color: #9ca3af;
+}
+
+.dark-mode .form-actions {
+  border-top-color: #4b5563;
+}
+
+.dark-mode .btn-secondary {
+  background: #374151;
+  color: #e5e7eb;
+}
+
+.dark-mode .btn-secondary:hover:not(:disabled) {
+  background: #4b5563;
+}
+
+.dark-mode .btn-primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.dark-mode .btn-primary:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.dark-mode .loading-spinner {
+  border-color: transparent;
+  border-top-color: currentColor;
+}
+
 /* Animations */
 @keyframes fadeIn {
   from { opacity: 0; }

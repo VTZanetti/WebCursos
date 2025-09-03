@@ -158,9 +158,20 @@ export default {
   overflow: hidden;
 }
 
+/* Dark mode styles */
+.dark-mode .course-card {
+  background: #1f2937;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
 .course-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border-color: #3b82f6;
+}
+
+.dark-mode .course-card:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
   border-color: #3b82f6;
 }
 
@@ -183,6 +194,10 @@ export default {
   line-height: 1.4;
   flex: 1;
   margin-right: 12px;
+}
+
+.dark-mode .course-title {
+  color: #f9fafb;
 }
 
 .course-actions {
@@ -211,9 +226,17 @@ export default {
   transform: scale(1.1);
 }
 
+.dark-mode .btn-edit:hover {
+  background: #374151;
+}
+
 .btn-delete:hover {
   background: #fef2f2;
   transform: scale(1.1);
+}
+
+.dark-mode .btn-delete:hover {
+  background: #374151;
 }
 
 .course-meta {
@@ -237,6 +260,10 @@ export default {
   font-weight: 500;
 }
 
+.dark-mode .stat-item {
+  color: #d1d5db;
+}
+
 .external-link {
   color: #3b82f6;
   text-decoration: none;
@@ -247,9 +274,18 @@ export default {
   transition: all 0.2s ease;
 }
 
+.dark-mode .external-link {
+  color: #60a5fa;
+}
+
 .external-link:hover {
   background: #eff6ff;
   color: #2563eb;
+}
+
+.dark-mode .external-link:hover {
+  background: #374151;
+  color: #93c5fd;
 }
 
 .course-progress {
@@ -266,6 +302,10 @@ export default {
   line-height: 1.5;
   margin: 0;
   font-style: italic;
+}
+
+.dark-mode .notes-text {
+  color: #d1d5db;
 }
 
 .course-footer {
@@ -287,6 +327,10 @@ export default {
   color: #9ca3af;
 }
 
+.dark-mode .date-text {
+  color: #9ca3af;
+}
+
 .progress-badge {
   padding: 4px 8px;
   border-radius: 12px;
@@ -301,9 +345,19 @@ export default {
   color: #6b7280;
 }
 
+.dark-mode .badge-none {
+  background: #374151;
+  color: #d1d5db;
+}
+
 .badge-low {
   background: #fef3c7;
   color: #92400e;
+}
+
+.dark-mode .badge-low {
+  background: #713f12;
+  color: #fde68a;
 }
 
 .badge-medium {
@@ -311,14 +365,29 @@ export default {
   color: #1e40af;
 }
 
+.dark-mode .badge-medium {
+  background: #1e3a8a;
+  color: #93c5fd;
+}
+
 .badge-high {
   background: #d1fae5;
   color: #065f46;
 }
 
+.dark-mode .badge-high {
+  background: #064e3b;
+  color: #6ee7b7;
+}
+
 .badge-complete {
   background: #dcfce7;
   color: #166534;
+}
+
+.dark-mode .badge-complete {
+  background: #052e16;
+  color: #34d399;
 }
 
 /* Responsividade */
@@ -367,6 +436,15 @@ export default {
     transparent
   );
   animation: loading 1.5s infinite;
+}
+
+.dark-mode .course-card.loading::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
 }
 
 @keyframes loading {

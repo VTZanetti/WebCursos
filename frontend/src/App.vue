@@ -1,5 +1,5 @@
 <template>
-  <div id="app">
+  <div id="app" :class="{ 'dark-mode': isDarkMode }">
     <!-- Navigation Bar -->
     <nav class="navbar" v-if="!isLoading">
       <div class="navbar-content">
@@ -16,6 +16,14 @@
           >
             📊 Dashboard
           </router-link>
+          <!-- Dark Mode Toggle -->
+          <button 
+            class="theme-toggle"
+            @click="toggleDarkMode"
+            :aria-label="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'"
+          >
+            {{ isDarkMode ? '☀️' : '🌙' }}
+          </button>
         </div>
       </div>
     </nav>
@@ -83,10 +91,22 @@ export default {
       appError: null,
       isApiOnline: false,
       globalNotification: null,
-      healthCheckInterval: null
+      healthCheckInterval: null,
+      isDarkMode: false
     }
   },
   async mounted() {
+    // Check for saved theme preference
+    const savedTheme = localStorage.getItem('webcurso-theme')
+    if (savedTheme === 'dark') {
+      this.isDarkMode = true
+    } else if (savedTheme === 'light') {
+      this.isDarkMode = false
+    } else {
+      // Default to system preference
+      this.isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    }
+    
     await this.initializeApp()
     this.startHealthCheck()
   },
@@ -189,6 +209,11 @@ export default {
       setTimeout(() => {
         this.globalNotification = null
       }, 4000)
+    },
+
+    toggleDarkMode() {
+      this.isDarkMode = !this.isDarkMode
+      localStorage.setItem('webcurso-theme', this.isDarkMode ? 'dark' : 'light')
     }
   }
 }
@@ -223,6 +248,21 @@ export default {
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
 }
 
+/* Dark Mode Variables */
+.dark-mode {
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+  
+  --bg-primary: #111827;
+  --bg-secondary: #1f2937;
+  --bg-muted: #374151;
+  
+  --border-color: #4b5563;
+  --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.4);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -251,6 +291,11 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
+}
+
+.dark-mode .navbar {
+  background: rgba(31, 41, 55, 0.95);
+  box-shadow: var(--shadow);
 }
 
 .navbar-content {
@@ -285,6 +330,7 @@ body {
 .navbar-nav {
   display: flex;
   gap: 8px;
+  align-items: center;
 }
 
 .nav-link {
@@ -300,6 +346,32 @@ body {
 .nav-link.active {
   color: var(--primary-color);
   background: rgba(59, 130, 246, 0.1);
+}
+
+.dark-mode .nav-link:hover,
+.dark-mode .nav-link.active {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+/* Theme Toggle Button */
+.theme-toggle {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  color: var(--text-primary);
+}
+
+.theme-toggle:hover {
+  background: var(--bg-muted);
 }
 
 /* Main Content */
@@ -367,6 +439,10 @@ body {
   box-shadow: var(--shadow-lg);
 }
 
+.dark-mode .error-content {
+  background: rgba(31, 41, 55, 0.95);
+}
+
 .error-icon {
   font-size: 4rem;
   margin-bottom: 24px;
@@ -384,12 +460,20 @@ body {
   line-height: 1.5;
 }
 
+.dark-mode .error-content p {
+  color: var(--text-secondary);
+}
+
 .error-details {
   background: var(--bg-muted);
   border-radius: var(--border-radius);
   padding: 16px;
   margin: 20px 0;
   text-align: left;
+}
+
+.dark-mode .error-details {
+  background: var(--bg-muted);
 }
 
 .error-details code {
@@ -399,6 +483,10 @@ body {
   border-radius: 4px;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 0.875rem;
+}
+
+.dark-mode .error-details code {
+  background: rgba(59, 130, 246, 0.2);
 }
 
 /* Buttons */
@@ -435,6 +523,10 @@ body {
 
 .btn-secondary:hover:not(:disabled) {
   background: #e5e7eb;
+}
+
+.dark-mode .btn-secondary:hover:not(:disabled) {
+  background: #4b5563;
 }
 
 .btn:disabled {
@@ -483,6 +575,11 @@ body {
   margin-top: auto;
 }
 
+.dark-mode .app-footer {
+  background: rgba(31, 41, 55, 0.95);
+  border-top: 1px solid var(--border-color);
+}
+
 .footer-content {
   max-width: 1200px;
   margin: 0 auto;
@@ -492,6 +589,10 @@ body {
   align-items: center;
   color: var(--text-secondary);
   font-size: 0.875rem;
+}
+
+.dark-mode .footer-content {
+  color: var(--text-secondary);
 }
 
 .footer-links {
@@ -554,6 +655,10 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #d1d5db;
+}
+
+.dark-mode ::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }
 
 /* Responsividade */

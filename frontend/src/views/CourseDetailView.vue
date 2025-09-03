@@ -315,42 +315,98 @@ export default {
       this.isUpdating = true
 
       try {
-        const promises = []
+        // Create an array of lessons to update
+        const aulasToUpdate = []
         
         for (let numeroAula = 1; numeroAula <= this.curso.total_aulas; numeroAula++) {
           const isCurrentlyCompleted = this.isLessonCompleted(numeroAula)
           
-          // Só fazer a requisição se o status for diferente do desejado
+          // Only update if the current status is different from desired status
           if (isCurrentlyCompleted !== markAsCompleted) {
-            promises.push(
-              apiService.toggleAula(this.courseId, numeroAula, markAsCompleted)
-            )
+            aulasToUpdate.push({
+              numero_aula: numeroAula,
+              concluida: markAsCompleted
+            })
+            // Add to updating lessons list for UI feedback
+            this.updatingLessons.push(numeroAula)
           }
         }
 
-        if (promises.length > 0) {
-          const responses = await Promise.all(promises)
-          
-          // Update local state based on API responses
-          // Use the last response to get the most up-to-date course data
-          if (responses.length > 0) {
-            const lastResponse = responses[responses.length - 1]
-            this.curso.aulas_concluidas = lastResponse.data.total_aulas_concluidas
-            this.curso.aulas_concluidas_list = lastResponse.data.aulas_concluidas_list
-            this.curso.progresso = lastResponse.data.progresso
+        if (aulasToUpdate.length > 0) {
+          try {
+            // Try to use the batch endpoint first (more efficient)
+            const response = await apiService.batchToggleAulas(this.courseId, aulasToUpdate)
+            
+            // Update local state with the response
+            this.curso.aulas_concluidas = response.data.total_aulas_concluidas
+            this.curso.aulas_concluidas_list = response.data.aulas_concluidas_list
+            this.curso.progresso = response.data.progresso
+            
+            this.showNotification(
+              `Todas as aulas foram ${markAsCompleted ? 'marcadas como concluídas' : 'desmarcadas'}!`,
+              'success'
+            )
+          } catch (batchError) {
+            // If batch endpoint fails, fall back to individual calls
+            console.warn('Batch endpoint failed, falling back to individual calls:', batchError)
+            
+            // Process lessons in smaller batches to avoid overwhelming the server
+            const batchSize = 5
+            const batches = []
+            
+            for (let i = 0; i < aulasToUpdate.length; i += batchSize) {
+              batches.push(aulasToUpdate.slice(i, i + batchSize))
+            }
+            
+            // Process each batch sequentially
+            let lastResponse = null
+            let hasError = false
+            
+            for (const batch of batches) {
+              try {
+                // Create promises for all lessons in this batch
+                const promises = batch.map(aula => 
+                  apiService.toggleAula(this.courseId, aula.numero_aula, aula.concluida)
+                )
+                
+                // Wait for all promises in this batch to complete
+                const responses = await Promise.all(promises)
+                lastResponse = responses[responses.length - 1] // Use the last response for final state
+              } catch (batchError) {
+                console.error('Error processing batch:', batchError)
+                hasError = true
+                // Continue with other batches
+              }
+            }
+            
+            // Update local state with the final response if we have one
+            if (lastResponse) {
+              this.curso.aulas_concluidas = lastResponse.data.total_aulas_concluidas
+              this.curso.aulas_concluidas_list = lastResponse.data.aulas_concluidas_list
+              this.curso.progresso = lastResponse.data.progresso
+            }
+            
+            if (hasError) {
+              this.showNotification(
+                `Alguns erros ocorreram ao atualizar as aulas. Verifique o console para mais detalhes.`,
+                'error'
+              )
+            } else {
+              this.showNotification(
+                `Todas as aulas foram ${markAsCompleted ? 'marcadas como concluídas' : 'desmarcadas'}!`,
+                'success'
+              )
+            }
           }
-          
-          this.showNotification(
-            `Todas as aulas foram ${markAsCompleted ? 'marcadas como concluídas' : 'desmarcadas'}!`,
-            'success'
-          )
         } else {
           this.showNotification('Nenhuma alteração necessária', 'info')
         }
       } catch (error) {
         console.error('Erro ao atualizar todas as aulas:', error)
-        this.showNotification('Erro ao atualizar aulas', 'error')
+        this.showNotification('Erro ao atualizar aulas: ' + (error.message || 'Erro desconhecido'), 'error')
       } finally {
+        // Clear the updating lessons list
+        this.updatingLessons = []
         this.isUpdating = false
       }
     },
@@ -428,6 +484,11 @@ export default {
   padding: 20px;
 }
 
+/* Dark mode styles */
+.dark-mode .course-detail {
+  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+}
+
 .loading-container,
 .error-container {
   display: flex;
@@ -462,6 +523,11 @@ export default {
   animation: spin 1s linear infinite;
 }
 
+.dark-mode .loading-spinner-large {
+  border-color: #4b5563;
+  border-top-color: #3b82f6;
+}
+
 .course-content {
   max-width: 1000px;
   margin: 0 auto;
@@ -474,6 +540,11 @@ export default {
   margin-bottom: 24px;
   backdrop-filter: blur(10px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.dark-mode .course-header {
+  background: rgba(31, 41, 55, 0.95);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .header-nav {
@@ -492,8 +563,16 @@ export default {
   transition: all 0.2s ease;
 }
 
+.dark-mode .back-btn {
+  color: #60a5fa;
+}
+
 .back-btn:hover {
   background: #eff6ff;
+}
+
+.dark-mode .back-btn:hover {
+  background: #374151;
 }
 
 .course-title {
@@ -502,6 +581,10 @@ export default {
   color: #1f2937;
   margin: 0 0 16px 0;
   line-height: 1.2;
+}
+
+.dark-mode .course-title {
+  color: #f9fafb;
 }
 
 .course-meta {
@@ -516,6 +599,10 @@ export default {
   font-weight: 500;
 }
 
+.dark-mode .meta-item {
+  color: #d1d5db;
+}
+
 .external-link {
   color: #3b82f6;
   text-decoration: none;
@@ -526,8 +613,16 @@ export default {
   transition: color 0.2s ease;
 }
 
+.dark-mode .external-link {
+  color: #60a5fa;
+}
+
 .external-link:hover {
   color: #2563eb;
+}
+
+.dark-mode .external-link:hover {
+  color: #93c5fd;
 }
 
 .progress-section {
@@ -549,6 +644,12 @@ export default {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
+.dark-mode .lessons-section,
+.dark-mode .notes-section {
+  background: rgba(31, 41, 55, 0.95);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
 .section-header {
   display: flex;
   justify-content: space-between;
@@ -563,6 +664,10 @@ export default {
   font-weight: 600;
   color: #1f2937;
   margin: 0;
+}
+
+.dark-mode .section-title {
+  color: #f9fafb;
 }
 
 .lessons-controls,
@@ -603,9 +708,19 @@ export default {
   color: #6b7280;
 }
 
+.dark-mode .btn-outline {
+  border-color: #4b5563;
+  color: #d1d5db;
+}
+
 .btn-outline:hover:not(:disabled) {
   background: #f9fafb;
   border-color: #9ca3af;
+}
+
+.dark-mode .btn-outline:hover:not(:disabled) {
+  background: #374151;
+  border-color: #6b7280;
 }
 
 .btn:disabled {
@@ -633,13 +748,28 @@ export default {
   position: relative;
 }
 
+.dark-mode .lesson-item {
+  background: #374151;
+  border-color: #4b5563;
+}
+
 .lesson-item:hover {
   background: #f3f4f6;
   border-color: #d1d5db;
 }
 
+.dark-mode .lesson-item:hover {
+  background: #4b5563;
+  border-color: #6b7280;
+}
+
 .lesson-item.completed {
   background: #ecfdf5;
+  border-color: #10b981;
+}
+
+.dark-mode .lesson-item.completed {
+  background: #064e3b;
   border-color: #10b981;
 }
 
@@ -670,6 +800,11 @@ export default {
   transition: all 0.2s ease;
 }
 
+.dark-mode .checkbox-custom {
+  border-color: #4b5563;
+  background: #1f2937;
+}
+
 .lesson-checkbox input:checked + .checkbox-custom {
   background: #10b981;
   border-color: #10b981;
@@ -692,6 +827,10 @@ export default {
   user-select: none;
 }
 
+.dark-mode .lesson-text {
+  color: #f9fafb;
+}
+
 .lesson-spinner {
   position: absolute;
   top: 50%;
@@ -705,9 +844,18 @@ export default {
   animation: spin 1s linear infinite;
 }
 
+.dark-mode .lesson-spinner {
+  border-color: #4b5563;
+  border-top-color: #3b82f6;
+}
+
 .lessons-summary {
   border-top: 1px solid #e5e7eb;
   padding-top: 20px;
+}
+
+.dark-mode .lessons-summary {
+  border-top-color: #4b5563;
 }
 
 .summary-stats {
@@ -723,6 +871,10 @@ export default {
   text-align: center;
 }
 
+.dark-mode .summary-item {
+  color: #d1d5db;
+}
+
 .notes-content {
   min-height: 120px;
 }
@@ -734,6 +886,10 @@ export default {
   min-height: 120px;
 }
 
+.dark-mode .notes-display {
+  background: #374151;
+}
+
 .notes-text {
   color: #374151;
   line-height: 1.6;
@@ -741,10 +897,18 @@ export default {
   white-space: pre-wrap;
 }
 
+.dark-mode .notes-text {
+  color: #f9fafb;
+}
+
 .no-notes {
   color: #9ca3af;
   text-align: center;
   margin: 40px 0;
+}
+
+.dark-mode .no-notes {
+  color: #9ca3af;
 }
 
 .link-btn {
@@ -754,6 +918,10 @@ export default {
   text-decoration: underline;
   cursor: pointer;
   font: inherit;
+}
+
+.dark-mode .link-btn {
+  color: #60a5fa;
 }
 
 .notes-textarea {
@@ -766,11 +934,25 @@ export default {
   line-height: 1.5;
   resize: vertical;
   min-height: 120px;
+  background: white;
+  color: #1f2937;
+}
+
+.dark-mode .notes-textarea {
+  border-color: #4b5563;
+  background: #1f2937;
+  color: #f9fafb;
 }
 
 .notes-textarea:focus {
   outline: none;
   border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.dark-mode .notes-textarea:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
 }
 
 .character-count {
@@ -778,6 +960,10 @@ export default {
   color: #9ca3af;
   font-size: 0.875rem;
   margin-top: 8px;
+}
+
+.dark-mode .character-count {
+  color: #9ca3af;
 }
 
 .notification {

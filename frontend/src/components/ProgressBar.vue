@@ -164,4 +164,31 @@ export default {
     background: linear-gradient(to right, #374151, #4b5563);
   }
 }
+
+/* Explicit dark mode classes */
+.dark-mode .progress-text {
+  color: #f9fafb;
+}
+
+.dark-mode .progress-percentage {
+  color: #d1d5db;
+}
+
+.dark-mode .progress-bar-bg {
+  background: linear-gradient(to right, #374151, #4b5563);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .progress-none {
+  background: #4b5563;
+}
+
+.dark-mode .progress-bar-shine {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+}
 </style>

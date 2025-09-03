@@ -356,8 +356,10 @@ def update_curso(curso_id):
         
         cursor.execute(query, update_values)
         conn.commit()
+        cursor.close()  # Close the cursor after use
         
         # Buscar e retornar o curso atualizado
+        cursor = conn.cursor()  # Create a new cursor for the next query
         cursor.execute('''
             SELECT id, titulo, link, total_aulas, anotacoes, created_at, updated_at
             FROM cursos 
@@ -365,14 +367,15 @@ def update_curso(curso_id):
         ''', (curso_id,))
         
         curso_atualizado = dict(cursor.fetchone())
-        curso_atualizado['aulas_concluidas'] = get_curso_aulas_concluidas(cursor, curso_id)
-        curso_atualizado['aulas_concluidas_list'] = get_aulas_concluidas_list(cursor, curso_id)
+        curso_atualizado['aulas_concluidas'] = get_curso_aulas_concluidas(conn, curso_id)
+        curso_atualizado['aulas_concluidas_list'] = get_aulas_concluidas_list(conn, curso_id)
         
         if curso_atualizado['total_aulas'] > 0:
             curso_atualizado['progresso'] = round((curso_atualizado['aulas_concluidas'] / curso_atualizado['total_aulas']) * 100, 1)
         else:
             curso_atualizado['progresso'] = 0.0
-        
+            
+        cursor.close()
         conn.close()
         
         return jsonify({
@@ -493,6 +496,7 @@ def toggle_aula_concluida(curso_id):
             message = f'Aula {numero_aula} desmarcada como concluída'
         
         conn.commit()
+        cursor.close()  # Close the cursor after use
         
         # Retornar status atualizado do curso
         total_concluidas = get_curso_aulas_concluidas(conn, curso_id)
@@ -522,6 +526,126 @@ def toggle_aula_concluida(curso_id):
             'success': False,
             'error': f'Erro ao atualizar aula: {str(e)}'
         }), 500
+
+@app.route('/api/cursos/<int:curso_id>/aulas/batch', methods=['POST'])
+def batch_toggle_aulas_concluidas(curso_id):
+    """
+    POST /api/cursos/<id>/aulas/batch - Marca ou desmarca múltiplas aulas como concluídas em lote.
+    Recebe: aulas (array de objetos com numero_aula e concluida)
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'aulas' not in data or not isinstance(data['aulas'], list):
+            return create_error_response(
+                'Campo obrigatório: aulas (array de objetos com numero_aula e concluida)',
+                400
+            )
+        
+        if len(data['aulas']) == 0:
+            return create_error_response(
+                'Array de aulas não pode estar vazio',
+                400
+            )
+        
+        # Validate each aula object
+        for aula in data['aulas']:
+            if not isinstance(aula, dict) or 'numero_aula' not in aula or 'concluida' not in aula:
+                return create_error_response(
+                    'Cada item em aulas deve ter numero_aula e concluida',
+                    400
+                )
+            
+            numero_aula = aula['numero_aula']
+            concluida = aula['concluida']
+            
+            if not isinstance(numero_aula, int) or numero_aula <= 0:
+                return create_error_response(
+                    'numero_aula deve ser um número inteiro positivo',
+                    400
+                )
+            
+            if not isinstance(concluida, bool):
+                return create_error_response(
+                    'concluida deve ser true ou false',
+                    400
+                )
+        
+        conn = get_db_connection()
+        
+        # Verificar se o curso existe e obter total de aulas
+        query = "SELECT titulo, total_aulas FROM cursos WHERE id = ?"
+        curso = db_manager.execute_query(conn, query, (curso_id,), fetch_one=True)
+        if not curso:
+            conn.close()
+            return create_error_response("Curso não encontrado", 404)
+        
+        # Validate all aula numbers
+        for aula in data['aulas']:
+            numero_aula = aula['numero_aula']
+            if numero_aula > curso['total_aulas']:
+                conn.close()
+                return create_error_response(
+                    f'Número da aula ({numero_aula}) não pode ser maior que o total de aulas ({curso["total_aulas"]})',
+                    400
+                )
+        
+        # Process all aulas in a single transaction
+        cursor = conn.cursor()
+        updated_aulas = []
+        
+        for aula in data['aulas']:
+            numero_aula = aula['numero_aula']
+            concluida = aula['concluida']
+            
+            if concluida:
+                # Marcar aula como concluída (inserir se não existir)
+                cursor.execute('''
+                    INSERT OR IGNORE INTO aulas_concluidas (curso_id, numero_aula)
+                    VALUES (?, ?)
+                ''', (curso_id, numero_aula))
+                message = f'Aula {numero_aula} marcada como concluída'
+            else:
+                # Desmarcar aula como concluída (remover se existir)
+                cursor.execute('''
+                    DELETE FROM aulas_concluidas
+                    WHERE curso_id = ? AND numero_aula = ?
+                ''', (curso_id, numero_aula))
+                message = f'Aula {numero_aula} desmarcada como concluída'
+            
+            updated_aulas.append({
+                'numero_aula': numero_aula,
+                'concluida': concluida,
+                'message': message
+            })
+        
+        conn.commit()
+        cursor.close()
+        
+        # Get updated course status
+        total_concluidas = get_curso_aulas_concluidas(conn, curso_id)
+        aulas_concluidas_list = get_aulas_concluidas_list(conn, curso_id)
+        
+        progresso = 0.0
+        if curso['total_aulas'] > 0:
+            progresso = round((total_concluidas / curso['total_aulas']) * 100, 1)
+        
+        conn.close()
+        
+        return create_success_response({
+            'curso_id': curso_id,
+            'updated_aulas': updated_aulas,
+            'total_aulas_concluidas': total_concluidas,
+            'aulas_concluidas_list': aulas_concluidas_list,
+            'progresso': progresso
+        }, 'Aulas atualizadas com sucesso')
+        
+    except Exception as e:
+        logger.error(f"Erro ao atualizar aulas em lote: {str(e)}")
+        return create_error_response(
+            f'Erro ao atualizar aulas: {str(e)}',
+            500
+        )
 
 # ===============================
 # ENDPOINTS DE UTILIDADE
@@ -644,6 +768,7 @@ if __name__ == '__main__':
     print("   PUT    /api/cursos/<id>     - Atualizar curso")
     print("   DELETE /api/cursos/<id>     - Deletar curso")
     print("   POST   /api/cursos/<id>/aula - Controlar aulas concluídas")
+    print("   POST   /api/cursos/<id>/aulas/batch - Controlar múltiplas aulas concluídas")
     print("   GET    /api/health          - Status da API")
     print("   GET    /api/stats           - Estatísticas gerais")
     print()

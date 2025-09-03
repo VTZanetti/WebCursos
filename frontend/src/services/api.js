@@ -165,6 +165,26 @@ export const apiService = {
     }
   },
 
+  // Marcar/desmarcar múltiplas aulas como concluídas em lote
+  async batchToggleAulas(cursoId, aulas) {
+    try {
+      const response = await api.post(`/cursos/${cursoId}/aulas/batch`, {
+        aulas: aulas
+      })
+      return response.data
+    } catch (error) {
+      if (error.status === 404) {
+        throw new Error('Curso não encontrado')
+      }
+      if (error.status === 400) {
+        const message = error.serverMessage || 'Dados das aulas inválidos'
+        throw new Error(message)
+      }
+      const message = error.userMessage || 'Erro ao atualizar progresso das aulas'
+      throw new Error(message)
+    }
+  },
+
   // ===== ESTATÍSTICAS =====
 
   // Buscar estatísticas gerais
