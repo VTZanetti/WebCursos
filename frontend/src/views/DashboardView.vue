@@ -236,8 +236,11 @@ export default {
           apiService.getStats()
         ])
         
-        this.cursos = cursosResponse.data || []
-        this.stats = statsResponse.data || null
+        // Fix: The API returns data in a nested structure
+        this.cursos = cursosResponse.data?.data?.cursos || []
+        this.stats = statsResponse.data?.data || null
+        
+        console.log('Cursos carregados:', this.cursos.length, 'cursos')
         
       } catch (error) {
         console.error('Erro ao carregar dashboard:', error)
@@ -266,7 +269,9 @@ export default {
       try {
         if (this.selectedCurso?.id) {
           // Editar curso existente
+          console.log('Atualizando curso com dados:', cursoData)
           const response = await apiService.updateCurso(this.selectedCurso.id, cursoData)
+          console.log('Resposta da atualização:', response)
           
           // Atualizar na lista local
           const index = this.cursos.findIndex(c => c.id === this.selectedCurso.id)
@@ -277,12 +282,20 @@ export default {
           this.showNotification('Curso atualizado com sucesso!', 'success')
         } else {
           // Criar novo curso
+          console.log('Criando curso com dados:', cursoData)
           const response = await apiService.createCurso(cursoData)
+          console.log('Resposta da criação:', response)
           
-          // Adicionar na lista local
-          this.cursos.unshift(response.data)
-          
-          this.showNotification('Curso criado com sucesso!', 'success')
+          // Verificar a estrutura da resposta
+          if (response && response.data) {
+            // Adicionar na lista local - fix: access the correct data structure
+            const novoCurso = response.data
+            this.cursos.unshift(novoCurso)
+            this.showNotification('Curso criado com sucesso!', 'success')
+          } else {
+            console.error('Resposta inesperada da API:', response)
+            this.showNotification('Erro inesperado ao criar curso', 'error')
+          }
         }
         
         this.closeModal()
@@ -343,7 +356,7 @@ export default {
     async loadStats() {
       try {
         const response = await apiService.getStats()
-        this.stats = response.data
+        this.stats = response.data.data
       } catch (error) {
         console.error('Erro ao carregar estatísticas:', error)
       }

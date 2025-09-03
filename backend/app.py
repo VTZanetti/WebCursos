@@ -1,10 +1,10 @@
 from flask import Flask, request, jsonify
-from flask import Flask, request, jsonify
 from flask_cors import CORS
-import sqlite3
-import os
 import logging
+import os
 from datetime import datetime
+from database import db_manager
+from config import DATABASE_TYPE
 
 # Configure logging
 logging.basicConfig(
@@ -31,7 +31,7 @@ CORS(app, resources={
 })
 
 # Configurações do banco de dados
-DATABASE_PATH = os.path.join(os.path.dirname(__file__), 'instance', 'database.sqlite')
+logger.info(f"Usando banco de dados: {DATABASE_TYPE.upper()}")
 
 # ===============================
 # HELPER FUNCTIONS
@@ -74,52 +74,37 @@ def create_success_response(data, message=None, status_code=200):
 
 def get_db_connection():
     """
-    Estabelece conexão com o banco de dados SQLite com tratamento de erros.
+    Estabelece conexão com o banco de dados com tratamento de erros.
     """
     try:
-        conn = sqlite3.connect(DATABASE_PATH)
-        conn.row_factory = sqlite3.Row  # Para acessar colunas por nome
-        
-        # Configurar timeout para evitar deadlocks
-        conn.execute('PRAGMA busy_timeout = 30000')  # 30 seconds
-        
-        return conn
-    except sqlite3.Error as e:
+        return db_manager.get_connection()
+    except Exception as e:
         logger.error(f"Erro ao conectar com o banco de dados: {str(e)}")
         raise Exception(f"Falha na conexão com o banco de dados: {str(e)}")
-    except Exception as e:
-        logger.error(f"Erro inesperado ao conectar com o banco: {str(e)}")
-        raise Exception(f"Erro interno ao acessar o banco de dados")
 
-def get_curso_aulas_concluidas(cursor, curso_id):
+def get_curso_aulas_concluidas(connection, curso_id):
     """
     Retorna o número de aulas concluídas para um curso específico.
     """
     try:
-        cursor.execute('''
-            SELECT COUNT(*) as count 
-            FROM aulas_concluidas 
-            WHERE curso_id = ?
-        ''', (curso_id,))
-        result = cursor.fetchone()
+        # Simplified for SQLite only
+        query = "SELECT COUNT(*) as count FROM aulas_concluidas WHERE curso_id = ?"
+        result = db_manager.execute_query(connection, query, (curso_id,), fetch_one=True)
         return result['count'] if result else 0
-    except sqlite3.Error as e:
+    except Exception as e:
         logger.error(f"Erro ao buscar aulas concluídas para curso {curso_id}: {str(e)}")
         raise Exception(f"Erro ao consultar aulas concluídas")
 
-def get_aulas_concluidas_list(cursor, curso_id):
+def get_aulas_concluidas_list(connection, curso_id):
     """
     Retorna lista das aulas concluídas para um curso específico.
     """
     try:
-        cursor.execute('''
-            SELECT numero_aula 
-            FROM aulas_concluidas 
-            WHERE curso_id = ? 
-            ORDER BY numero_aula
-        ''', (curso_id,))
-        return [row['numero_aula'] for row in cursor.fetchall()]
-    except sqlite3.Error as e:
+        # Simplified for SQLite only
+        query = "SELECT numero_aula FROM aulas_concluidas WHERE curso_id = ? ORDER BY numero_aula"
+        results = db_manager.execute_query(connection, query, (curso_id,), fetch_all=True)
+        return [row['numero_aula'] for row in results] if results else []
+    except Exception as e:
         logger.error(f"Erro ao buscar lista de aulas concluídas para curso {curso_id}: {str(e)}")
         raise Exception(f"Erro ao consultar lista de aulas")
 
@@ -136,20 +121,15 @@ def get_cursos():
     try:
         logger.info("Buscando lista de cursos")
         conn = get_db_connection()
-        cursor = conn.cursor()
         
         # Buscar todos os cursos
-        cursor.execute('''
-            SELECT id, titulo, link, total_aulas, anotacoes, created_at, updated_at
-            FROM cursos
-            ORDER BY created_at DESC
-        ''')
+        query = "SELECT id, titulo, link, total_aulas, anotacoes, created_at, updated_at FROM cursos ORDER BY created_at DESC"
+        cursos_data = db_manager.execute_query(conn, query, fetch_all=True)
         
         cursos = []
-        for row in cursor.fetchall():
-            curso = dict(row)
+        for curso in cursos_data:
             # Calcular aulas concluídas para cada curso
-            curso['aulas_concluidas'] = get_curso_aulas_concluidas(cursor, curso['id'])
+            curso['aulas_concluidas'] = get_curso_aulas_concluidas(conn, curso['id'])
             # Calcular progresso em percentual
             if curso['total_aulas'] > 0:
                 curso['progresso'] = round((curso['aulas_concluidas'] / curso['total_aulas']) * 100, 1)
@@ -164,18 +144,12 @@ def get_cursos():
             'count': len(cursos)
         })
         
-    except sqlite3.Error as db_error:
-        logger.error(f"Erro no banco de dados ao buscar cursos: {str(db_error)}")
+    except Exception as e:
+        logger.error(f"Erro ao buscar cursos: {str(e)}")
         return create_error_response(
             "Erro ao acessar o banco de dados",
             500,
             "Falha na consulta dos cursos"
-        )
-    except Exception as e:
-        logger.error(f"Erro inesperado ao buscar cursos: {str(e)}")
-        return create_error_response(
-            "Erro interno do servidor ao buscar cursos",
-            500
         )
     finally:
         if conn:
@@ -225,37 +199,33 @@ def create_curso():
             )
         
         conn = get_db_connection()
-        cursor = conn.cursor()
         
-        # Inserir novo curso
-        cursor.execute('''
-            INSERT INTO cursos (titulo, link, total_aulas, anotacoes)
-            VALUES (?, ?, ?, ?)
-        ''', (
-            data['titulo'].strip(),
-            data.get('link', '').strip(),
-            data['total_aulas'],
-            data.get('anotacoes', '').strip()
-        ))
+        # Inserir novo curso - simplified for SQLite
+        insert_query = "INSERT INTO cursos (titulo, link, total_aulas, anotacoes) VALUES (?, ?, ?, ?)"
         
-        curso_id = cursor.lastrowid
+        curso_id = db_manager.execute_query(
+            conn,
+            insert_query,
+            (
+                data['titulo'].strip(),
+                data.get('link', '').strip(),
+                data['total_aulas'],
+                data.get('anotacoes', '').strip()
+            )
+        )
         
         # Buscar o curso recém-criado para retornar
-        cursor.execute('''
-            SELECT id, titulo, link, total_aulas, anotacoes, created_at, updated_at
-            FROM cursos 
-            WHERE id = ?
-        ''', (curso_id,))
+        select_query = "SELECT id, titulo, link, total_aulas, anotacoes, created_at, updated_at FROM cursos WHERE id = ?"
         
-        curso_row = cursor.fetchone()
+        curso_row = db_manager.execute_query(conn, select_query, (curso_id,), fetch_one=True)
+        
         if not curso_row:
             raise Exception("Falha ao recuperar o curso criado")
             
-        novo_curso = dict(curso_row)
+        novo_curso = curso_row
         novo_curso['aulas_concluidas'] = 0
         novo_curso['progresso'] = 0.0
         
-        conn.commit()
         logger.info(f"Curso criado com sucesso: ID {curso_id} - {data['titulo']}")
         
         return create_success_response(
@@ -264,25 +234,12 @@ def create_curso():
             201
         )
         
-    except sqlite3.IntegrityError as integrity_error:
-        logger.error(f"Erro de integridade ao criar curso: {str(integrity_error)}")
-        return create_error_response(
-            "Erro de validação dos dados",
-            400,
-            "Possível duplicação de dados ou violação de restrições"
-        )
-    except sqlite3.Error as db_error:
-        logger.error(f"Erro no banco de dados ao criar curso: {str(db_error)}")
+    except Exception as e:
+        logger.error(f"Erro ao criar curso: {str(e)}")
         return create_error_response(
             "Erro ao salvar curso no banco de dados",
             500,
-            "Falha na operação de inserção"
-        )
-    except Exception as e:
-        logger.error(f"Erro inesperado ao criar curso: {str(e)}")
-        return create_error_response(
-            "Erro interno do servidor ao criar curso",
-            500
+            str(e)
         )
     finally:
         if conn:
@@ -298,26 +255,18 @@ def get_curso(curso_id):
     """
     try:
         conn = get_db_connection()
-        cursor = conn.cursor()
         
         # Buscar o curso
-        cursor.execute('''
-            SELECT id, titulo, link, total_aulas, anotacoes, created_at, updated_at
-            FROM cursos 
-            WHERE id = ?
-        ''', (curso_id,))
+        query = "SELECT id, titulo, link, total_aulas, anotacoes, created_at, updated_at FROM cursos WHERE id = ?"
+        curso_row = db_manager.execute_query(conn, query, (curso_id,), fetch_one=True)
         
-        curso_row = cursor.fetchone()
         if not curso_row:
             conn.close()
-            return jsonify({
-                'success': False,
-                'error': 'Curso não encontrado'
-            }), 404
+            return create_error_response("Curso não encontrado", 404)
         
-        curso = dict(curso_row)
-        curso['aulas_concluidas'] = get_curso_aulas_concluidas(cursor, curso_id)
-        curso['aulas_concluidas_list'] = get_aulas_concluidas_list(cursor, curso_id)
+        curso = curso_row
+        curso['aulas_concluidas'] = get_curso_aulas_concluidas(conn, curso_id)
+        curso['aulas_concluidas_list'] = get_aulas_concluidas_list(conn, curso_id)
         
         # Calcular progresso
         if curso['total_aulas'] > 0:
@@ -326,17 +275,15 @@ def get_curso(curso_id):
             curso['progresso'] = 0.0
         
         conn.close()
-        
-        return jsonify({
-            'success': True,
-            'data': curso
-        }), 200
+        return create_success_response(curso)
         
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'Erro ao buscar curso: {str(e)}'
-        }), 500
+        logger.error(f"Erro ao buscar curso {curso_id}: {str(e)}")
+        return create_error_response(
+            "Erro ao acessar o banco de dados",
+            500,
+            str(e)
+        )
 
 @app.route('/api/cursos/<int:curso_id>', methods=['PUT'])
 def update_curso(curso_id):
@@ -582,11 +529,33 @@ def health_check():
     """
     Endpoint de verificação de saúde da API.
     """
-    return jsonify({
-        'success': True,
-        'message': 'API funcionando corretamente',
-        'timestamp': datetime.now().isoformat()
-    }), 200
+    try:
+        # Tentar conexão com banco
+        conn = get_db_connection()
+        
+        # Apenas verificar conexão, sem queries complexas
+        query = "SELECT 1" if DATABASE_TYPE == 'mysql' else "SELECT 1"
+        result = db_manager.execute_query(conn, query, fetch_one=True)
+        
+        # Fechar conexão após teste
+        conn.close()
+        
+        # Informações de status
+        return jsonify({
+            'success': True,
+            'message': 'API funcionando corretamente',
+            'database_type': DATABASE_TYPE,
+            'timestamp': datetime.now().isoformat()
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Health check falhou: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'API está online, mas há problemas com o banco de dados',
+            'error': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 503
 
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
@@ -662,11 +631,7 @@ def internal_error(error):
 # ===============================
 
 if __name__ == '__main__':
-    # Verificar se o banco de dados existe, se não, criar
-    if not os.path.exists(DATABASE_PATH):
-        print("Banco de dados não encontrado. Executando inicialização...")
-        from init_db import init_database
-        init_database()
+    logger.info(f"Iniciando API WebCurso com banco de dados: {DATABASE_TYPE}")
     
     print("🚀 Iniciando API do WebCurso...")
     print("📊 Endpoints disponíveis:")
@@ -680,10 +645,12 @@ if __name__ == '__main__':
     print("   GET    /api/stats           - Estatísticas gerais")
     print()
     print("🌐 CORS habilitado para:")
+    print("   - http://localhost:5173")
+    print("   - http://127.0.0.1:5173")
     print("   - http://localhost:3000")
-    print("   - http://localhost:8080")
     print("   - http://127.0.0.1:3000")
-    print("   - http://127.0.0.1:8080")
+    print()
+    print(f"DB TYPE: {DATABASE_TYPE}")
     print()
     
     app.run(debug=True, host='0.0.0.0', port=5000)

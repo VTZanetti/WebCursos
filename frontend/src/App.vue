@@ -118,10 +118,12 @@ export default {
     async checkApiConnection() {
       try {
         const result = await apiService.healthCheck()
+        const wasOffline = !this.isApiOnline
         this.isApiOnline = true
         this.appError = null
         
-        if (!this.isLoading) {
+        // Only show reconnection message if we were previously offline
+        if (!this.isLoading && wasOffline) {
           this.showGlobalNotification('Conexão com API restabelecida', 'success')
         }
         
@@ -136,7 +138,10 @@ export default {
           this.appError = errorMessage
           throw error
         } else {
-          this.showGlobalNotification(errorMessage, 'error')
+          // Only show error notification if we were previously online
+          if (this.isApiOnline !== false) {
+            this.showGlobalNotification(errorMessage, 'error')
+          }
         }
       }
     },
@@ -172,10 +177,10 @@ export default {
     },
 
     startHealthCheck() {
-      // Verificar status da API a cada 30 segundos
+      // Verificar status da API a cada 2 minutos (less frequent)
       this.healthCheckInterval = setInterval(async () => {
         await this.checkApiConnection()
-      }, 30000)
+      }, 120000)  // 2 minutes instead of 30 seconds
     },
 
     showGlobalNotification(message, type = 'info') {

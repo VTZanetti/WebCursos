@@ -57,5 +57,6 @@ echo  Pressione Ctrl+C para parar o servidor
 echo ========================================
 echo.
 
-REM Iniciar o servidor Flask
+REM Iniciar o servidor Flask - permanently using SQLite
+set DATABASE_TYPE=sqlite
 python app.py

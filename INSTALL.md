@@ -7,7 +7,7 @@
 WebCurso/
 ├── backend/                    # API Flask (CONCLUÍDO)
 │   ├── instance/
-│   │   └── database.sqlite     # Banco de dados SQLite
+│   │   └── database.sqlite     # Banco de dados SQLite (configuração permanente)
 │   ├── app.py                  # Aplicação Flask principal
 │   ├── init_db.py             # Inicialização do banco
 │   ├── requirements.txt        # Dependências
@@ -31,7 +31,7 @@ WebCurso/
 
 ### 🔧 Recursos Implementados
 ✅ **CORS habilitado** para desenvolvimento frontend  
-✅ **Banco SQLite** com tabelas relacionais  
+✅ **Banco SQLite permanente** - sem necessidade de reconfiguração  
 ✅ **Validação de dados** e tratamento de erros  
 ✅ **Cálculo automático** de progresso em percentual  
 ✅ **Dados de exemplo** pré-carregados  
@@ -54,10 +54,10 @@ cd backend
 # 2. Instale dependências
 pip install Flask==2.3.3 Flask-CORS==4.0.0 SQLAlchemy==2.0.21
 
-# 3. Inicialize o banco de dados
+# 3. Inicialize o banco de dados (apenas na primeira vez)
 python init_db.py
 
-# 4. Execute a API
+# 4. Execute a API (SQLite é usado automaticamente)
 python app.py
 ```
 
@@ -94,7 +94,7 @@ Invoke-RestMethod -Uri "http://localhost:5000/api/cursos" -Method GET
 
 | Componente | Status | Descrição |
 |------------|--------|-----------|
-| 🗄️ Banco de Dados | ✅ COMPLETO | SQLite com tabelas relacionais |
+| 🗄️ Banco de Dados | ✅ COMPLETO | SQLite permanente sem reconfiguração |
 | 🔌 API REST | ✅ COMPLETO | 8 endpoints funcionais |
 | 🌐 CORS | ✅ COMPLETO | Configurado para desenvolvimento |
 | 🧪 Testes | ✅ COMPLETO | Script automatizado |
@@ -130,7 +130,7 @@ Invoke-RestMethod -Uri "http://localhost:5000/api/cursos/1/aula" -Method POST -B
 
 - **Separação de responsabilidades**: Backend e Frontend isolados
 - **API RESTful padrão**: Endpoints consistentes e bem documentados
-- **Banco relacional**: SQLite com chaves estrangeiras e índices
+- **Banco permanente**: SQLite configurado permanentemente
 - **CORS configurado**: Pronto para desenvolvimento frontend
 - **Tratamento de erros**: Respostas padronizadas em JSON
 - **Validação de dados**: Entrada validada antes do processamento

@@ -34,7 +34,7 @@ O **WebCurso** é uma aplicação web moderna para gerenciamento de cursos onlin
 **Componentes Principais:**
 - **Backend**: API RESTful desenvolvida em Flask (Python)
 - **Frontend**: SPA (Single Page Application) desenvolvida em Vue.js 3
-- **Banco de Dados**: SQLite para persistência de dados
+- **Banco de Dados**: SQLite para persistência de dados (configuração permanente)
 - **Comunicação**: HTTP/JSON entre frontend e backend via CORS
 
 ---
@@ -127,6 +127,8 @@ pip list
 
 ### Passo 4: Inicialização do Banco de Dados
 
+O WebCurso agora usa SQLite permanentemente, sem necessidade de configuração adicional:
+
 ```bash
 # Executar script de inicialização (primeira vez apenas)
 python init_db.py
@@ -146,7 +148,7 @@ Dados de exemplo inseridos!
 ### Passo 5: Iniciar o Servidor da API Flask
 
 ```bash
-# Iniciar servidor Flask
+# Iniciar servidor Flask (SQLite é usado automaticamente)
 python app.py
 ```
 
