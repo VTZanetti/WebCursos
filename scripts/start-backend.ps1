@@ -2,8 +2,15 @@
 Write-Host "🎓 Starting WebCurso Backend..." -ForegroundColor Green
 Write-Host "==================================================" -ForegroundColor Green
 
+# Get the full path of the current script directory
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$RootDir = Split-Path -Parent $ScriptDir
+
+Write-Host "Script directory: $ScriptDir" -ForegroundColor Yellow
+Write-Host "Root directory: $RootDir" -ForegroundColor Yellow
+
 # Change to backend directory
-Set-Location -Path "backend"
+Set-Location -Path "$RootDir\backend"
 
 # Set environment variables for Flask
 $env:FLASK_APP = "app.py"
@@ -13,7 +20,7 @@ Write-Host "🔧 Checking database..." -ForegroundColor Yellow
 
 # Check if instance directory exists, if not create it
 if (!(Test-Path -Path "instance")) {
-    New-Item -ItemType Directory -Name "instance"
+    New-Item -ItemType Directory -Name "instance" | Out-Null
 }
 
 # Check if database exists, if not initialize it
