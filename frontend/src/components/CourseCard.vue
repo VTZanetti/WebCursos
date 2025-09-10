@@ -28,6 +28,9 @@
         <span class="stat-item">
           ✅ {{ curso.aulas_concluidas }} concluídas
         </span>
+        <span v-if="curso.duracao_total_formatada && curso.duracao_total_formatada !== '0min'" class="stat-item time-stat">
+          🕒 {{ curso.duracao_total_formatada }}
+        </span>
       </div>
       
       <div class="course-link" v-if="curso.link">
@@ -40,6 +43,18 @@
         >
           🔗 Acessar
         </a>
+      </div>
+    </div>
+
+    <!-- Informações de tempo restante -->
+    <div v-if="showTimeInfo" class="time-info">
+      <div class="time-item">
+        <span class="time-label">🎥 Por aula:</span>
+        <span class="time-value">{{ curso.duracao_por_aula_formatada }}</span>
+      </div>
+      <div v-if="curso.progresso < 100" class="time-item">
+        <span class="time-label">⏱️ Tempo restante:</span>
+        <span class="time-value tempo-restante">{{ curso.tempo_restante_formatado }}</span>
       </div>
     </div>
 
@@ -110,6 +125,11 @@ export default {
     },
     isUpdated() {
       return this.curso.updated_at && this.curso.updated_at !== this.curso.created_at
+    },
+    showTimeInfo() {
+      return this.curso.duracao_total_formatada && 
+             this.curso.duracao_total_formatada !== '0min' &&
+             this.curso.duracao_por_aula_formatada
     }
   },
   methods: {
@@ -262,6 +282,65 @@ export default {
 
 .dark-mode .stat-item {
   color: #d1d5db;
+}
+
+.time-stat {
+  color: #3b82f6 !important;
+  font-weight: 600;
+}
+
+.dark-mode .time-stat {
+  color: #60a5fa !important;
+}
+
+.time-info {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dark-mode .time-info {
+  background: #2d3748;
+  border-color: #4a5568;
+}
+
+.time-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.time-label {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.dark-mode .time-label {
+  color: #9ca3af;
+}
+
+.time-value {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.dark-mode .time-value {
+  color: #e5e7eb;
+}
+
+.tempo-restante {
+  color: #dc2626;
+}
+
+.dark-mode .tempo-restante {
+  color: #f87171;
 }
 
 .external-link {
