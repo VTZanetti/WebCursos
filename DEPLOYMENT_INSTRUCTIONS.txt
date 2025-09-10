@@ -1,0 +1,116 @@
+# INSTRUÇÕES PARA DEPLOYMENT DO WEBCURSO NO SERVIDOR UBUNTU
+
+## 📋 O que foi criado/adicionado:
+
+1. **Dockerfile para Backend** - Permite containerizar a API Flask
+2. **Dockerfile para Frontend** - Permite containerizar a aplicação Vue.js
+3. **docker-compose.yml** - Orquestra ambos os serviços
+4. **Atualização no README.md** - Inclui instruções completas de deployment
+5. **Script start.sh** - Para execução direta no Linux (sem Docker)
+
+## 🚀 Opções de Deployment:
+
+### Opção 1: Usando Docker Compose (RECOMENDADO)
+
+Como você já tem Docker e Portainer no servidor, esta é a opção mais fácil:
+
+1. **Transfira os arquivos para o servidor:**
+   ```bash
+   # Na sua máquina local (Windows)
+   scp -r "c:\Users\vitor\OneDrive\Documentos\Dev\WebCursos" zanetti@192.168.0.200:/home/zanetti/
+   ```
+
+2. **No servidor Ubuntu:**
+   ```bash
+   # Navegue até o diretório do projeto
+   cd /home/zanetti/WebCursos
+   
+   # Construa e inicie os serviços
+   docker-compose up -d
+   
+   # Verifique se os serviços estão rodando
+   docker-compose ps
+   ```
+
+3. **Acesse a aplicação:**
+   - Frontend: http://192.168.0.200:3000
+   - Backend API: http://192.168.0.200:5000
+
+### Opção 2: Execução Direta no Sistema (sem Docker)
+
+1. **Transfira os arquivos para o servidor:**
+   ```bash
+   # Na sua máquina local (Windows)
+   scp -r "c:\Users\vitor\OneDrive\Documentos\Dev\WebCursos" zanetti@192.168.0.200:/home/zanetti/
+   ```
+
+2. **No servidor Ubuntu:**
+   ```bash
+   # Tornar o script executável (se não foi transferido com permissões)
+   chmod +x /home/zanetti/WebCursos/scripts/start.sh
+   
+   # Executar a aplicação
+   /home/zanetti/WebCursos/scripts/start.sh
+   ```
+
+## 🔧 Gerenciamento via Portainer:
+
+Como você tem o Portainer na porta 9000, pode:
+
+1. Acessar http://192.168.0.200:9000
+2. Ir em "Stacks" → "Add stack"
+3. Selecionar "Repository" e apontar para seu repositório Git (se tiver)
+4. Ou selecionar "Web editor" e colar o conteúdo do docker-compose.yml
+5. Deploy da stack
+
+## 🔒 Acesso via Tailscale:
+
+Como você tem o Tailscale configurado, após o deployment:
+
+1. Descubra o IP do Tailscale do seu servidor:
+   ```bash
+   # No servidor Ubuntu
+   tailscale status
+   ```
+
+2. Acesse de qualquer PC na mesma rede Tailscale:
+   - Frontend: http://[TAILSCALE_IP]:3000
+   - Backend API: http://[TAILSCALE_IP]:5000
+
+## 🔄 Comandos Úteis:
+
+```bash
+# Ver logs dos contêineres
+docker-compose logs -f
+
+# Parar os serviços
+docker-compose down
+
+# Reconstruir e reiniciar
+docker-compose up -d --build
+
+# Ver status
+docker-compose ps
+```
+
+## 🛠️ Troubleshooting:
+
+1. **Se as portas já estiverem em uso:**
+   - Verifique com: `sudo lsof -i :3000` e `sudo lsof -i :5000`
+   - Mate os processos: `sudo kill -9 [PID]`
+
+2. **Se houver problemas de permissões:**
+   - Adicione seu usuário ao grupo docker: `sudo usermod -aG docker $USER`
+   - Reinicie a sessão
+
+3. **Se o banco de dados não for criado:**
+   - Verifique as permissões do diretório backend/instance
+   - Execute manualmente: `docker-compose exec backend python init_db.py`
+
+## ✅ Verificação após deployment:
+
+1. Acesse http://192.168.0.200:5000/api/health - Deve retornar status OK
+2. Acesse http://192.168.0.200:5000/api/cursos - Deve mostrar os cursos (pode estar vazio)
+3. Acesse http://192.168.0.200:3000 - Deve mostrar a interface do WebCurso
+
+Pronto! Sua aplicação estará disponível 24/7 no seu servidor Ubuntu e acessível de todos os seus PCs via Tailscale.

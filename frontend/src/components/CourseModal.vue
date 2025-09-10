@@ -200,30 +200,31 @@ export default {
     },
     
     validateField(fieldName) {
-      this.$delete(this.errors, fieldName)
+      // Remove error using Vue 3 reactivity
+      delete this.errors[fieldName]
       
       switch (fieldName) {
         case 'titulo':
           if (!this.form.titulo.trim()) {
-            this.$set(this.errors, 'titulo', 'Título é obrigatório')
+            this.errors[fieldName] = 'Título é obrigatório'
           } else if (this.form.titulo.length < 3) {
-            this.$set(this.errors, 'titulo', 'Título deve ter pelo menos 3 caracteres')
+            this.errors[fieldName] = 'Título deve ter pelo menos 3 caracteres'
           }
           break;
           
         case 'total_aulas':
           if (!this.form.total_aulas) {
-            this.$set(this.errors, 'total_aulas', 'Total de aulas é obrigatório')
+            this.errors[fieldName] = 'Total de aulas é obrigatório'
           } else if (this.form.total_aulas < 1) {
-            this.$set(this.errors, 'total_aulas', 'Deve ter pelo menos 1 aula')
+            this.errors[fieldName] = 'Deve ter pelo menos 1 aula'
           } else if (this.form.total_aulas > 1000) {
-            this.$set(this.errors, 'total_aulas', 'Máximo de 1000 aulas')
+            this.errors[fieldName] = 'Máximo de 1000 aulas'
           }
           break;
           
         case 'link':
           if (this.form.link && !this.isValidUrl(this.form.link)) {
-            this.$set(this.errors, 'link', 'URL inválida')
+            this.errors[fieldName] = 'URL inválida'
           }
           break;
       }
@@ -272,20 +273,6 @@ export default {
     closeModal() {
       if (this.isLoading) return
       this.$emit('close')
-    },
-    
-    // Para Vue 2 compatibility
-    $set(obj, key, value) {
-      if (typeof obj === 'object' && obj !== null) {
-        obj[key] = value
-      }
-    },
-    
-    $delete(obj, key) {
-      // Fixed recursive call issue
-      if (typeof obj === 'object' && obj !== null) {
-        delete obj[key]
-      }
     }
   }
 }

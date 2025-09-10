@@ -199,24 +199,7 @@ cd frontend
 npm install
 ```
 
-**Dependências que serão instaladas:**
-- vue@^3.4.0
-- vue-router@^4.2.5
-- axios@^1.6.0
-- @vitejs/plugin-vue@^4.5.0
-- vite@^5.0.0
-
-**Saída esperada:**
-```
-added [número] packages, and audited [número] packages in [tempo]s
-
-[número] packages are looking for funding
-  run `npm fund` for details
-
-found 0 vulnerabilities
-```
-
-### Passo 3: Iniciar o Servidor de Desenvolvimento Vite
+### Passo 3: Iniciar o Servidor de Desenvolvimento Vue.js
 
 ```bash
 # Iniciar servidor de desenvolvimento
@@ -225,237 +208,214 @@ npm run dev
 
 **Saída esperada:**
 ```
-  VITE v5.0.0  ready in [tempo] ms
+  VITE v5.0.0  ready in 1234 ms
 
-  ➜  Local:   http://localhost:3000/
-  ➜  Network: use --host to expose
-  ➜  press h + enter to show help
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://[your-ip]:5173/
 ```
 
-**✅ Frontend configurado com sucesso! A aplicação estará disponível em `http://localhost:3000`**
+**✅ Frontend configurado com sucesso! A interface estará disponível em `http://localhost:5173`**
 
 ---
 
-## 🚀 Executando a Aplicação
+## ☁️ Implantação no Servidor Ubuntu com Docker
 
-### Configuração de Terminais
+### 📋 Pré-requisitos para Implantação
 
-Para executar a aplicação completa, você precisará de **2 terminais simultâneos**:
+1. **Servidor Ubuntu** com acesso SSH
+2. **Docker** instalado no servidor
+3. **Docker Compose** instalado no servidor
+4. **Git** (opcional, para clonar o repositório)
 
-#### Terminal 1 - Backend (API Flask)
+### 🔧 Passos para Implantação
+
+#### 1. Acesse seu servidor Ubuntu via SSH
+
 ```bash
-cd c:\Dev\WebCurso\backend
-venv\Scripts\activate  # Windows
-# ou source venv/bin/activate  # Linux/macOS
-python app.py
+ssh zanetti@192.168.0.200
+# Senha: password
 ```
 
-#### Terminal 2 - Frontend (Vue.js)
+#### 2. Instale o Docker e Docker Compose (se ainda não estiverem instalados)
+
 ```bash
-cd c:\Dev\WebCurso\frontend
-npm run dev
+# Atualize o sistema
+sudo apt update
+
+# Instale dependências
+sudo apt install apt-transport-https ca-certificates curl software-properties-common
+
+# Adicione a chave GPG do Docker
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+
+# Adicione o repositório do Docker
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+
+# Atualize novamente
+sudo apt update
+
+# Instale o Docker
+sudo apt install docker-ce
+
+# Instale o Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+# Dê permissão de execução
+sudo chmod +x /usr/local/bin/docker-compose
+
+# Adicione seu usuário ao grupo docker
+sudo usermod -aG docker $USER
+
+# Reinicie a sessão ou execute:
+newgrp docker
 ```
 
-### URLs de Acesso
+#### 3. Transfira os arquivos do projeto para o servidor
 
-| Serviço | URL | Descrição |
-|---------|-----|-----------|
-| **API Backend** | `http://127.0.0.1:5000` | Endpoints da API RESTful |
-| **Frontend** | `http://localhost:3000` | Interface web da aplicação |
-| **Health Check** | `http://127.0.0.1:5000/api/health` | Status da API |
-| **Documentação API** | `http://127.0.0.1:5000/api/cursos` | Lista de cursos (JSON) |
+Você pode usar o `scp` para transferir os arquivos:
 
-### Acessando e Usando a Aplicação
-
-#### 1. Acesso Inicial
-1. **Abra o navegador** e acesse: `http://localhost:3000`
-2. **Aguarde o carregamento** da interface (alguns segundos na primeira vez)
-3. **Verifique a conexão** - deve aparecer "🟢 API Online" no rodapé
-
-#### 2. Navegação Principal
-
-**Dashboard (Página Inicial):**
-- **URL**: `http://localhost:3000/`
-- **Funcionalidades**:
-  - Visualizar estatísticas gerais
-  - Ver lista de cursos existentes
-  - Criar novos cursos (botão "➕ Novo Curso")
-  - Filtrar cursos por status
-  - Buscar cursos por título
-
-**Detalhes do Curso:**
-- **URL**: `http://localhost:3000/curso/{id}`
-- **Acesso**: Clique em qualquer card de curso no dashboard
-- **Funcionalidades**:
-  - Visualizar informações detalhadas
-  - Controlar aulas concluídas (checkboxes)
-  - Editar anotações do curso
-  - Ver progresso visual atualizado
-
-#### 3. Fluxo de Uso Recomendado
-
-1. **Explorar dados exemplo**:
-   - Acesse o dashboard
-   - Observe os cursos pré-carregados
-   - Clique em um curso para ver detalhes
-
-2. **Criar novo curso**:
-   - Clique em "➕ Novo Curso"
-   - Preencha: título, total de aulas, link (opcional), anotações
-   - Clique "Criar Curso"
-
-3. **Gerenciar progresso**:
-   - Entre nos detalhes de um curso
-   - Marque aulas como concluídas usando os checkboxes
-   - Observe a atualização do progresso em tempo real
-
-4. **Editar informações**:
-   - No dashboard: botão "✏️" para editar curso
-   - Nos detalhes: botão "✏️ Editar" para anotações
-
-#### 4. Verificação de Funcionamento
-
-**Teste rápido de integração:**
 ```bash
-# Em um terceiro terminal, teste a API diretamente:
-curl http://127.0.0.1:5000/api/health
-
-# Resposta esperada: {"success": true, "message": "API funcionando corretamente"}
+# Na sua máquina local, execute:
+scp -r c:\Users\vitor\OneDrive\Documentos\Dev\WebCursos zanetti@192.168.0.200:/home/zanetti/
 ```
 
-**Indicadores visuais de sucesso:**
-- ✅ Dashboard carrega com estatísticas
-- ✅ Lista de cursos aparece (mínimo 2 cursos exemplo)
-- ✅ Modal de criação abre/fecha corretamente
-- ✅ Navegação entre páginas funciona
-- ✅ Checkboxes respondem ao clique
-- ✅ Rodapé mostra "🟢 API Online"
+Ou clone o repositório se estiver no GitHub:
 
----
-
-## 🛠 Comandos Úteis para Desenvolvimento
-
-### Backend
 ```bash
-# Reiniciar banco de dados (apaga dados)
-python init_db.py
-
-# Executar testes da API
-python test_api.py
-
-# Verificar status da API
-curl http://127.0.0.1:5000/api/health
+# No servidor Ubuntu
+git clone [URL_DO_SEU_REPOSITORIO] WebCursos
+cd WebCursos
 ```
 
-### Frontend
+#### 4. Construa e execute os contêineres com Docker Compose
+
 ```bash
-# Limpar cache e reinstalar dependências
-rm -rf node_modules package-lock.json
-npm install
+# Navegue até o diretório do projeto
+cd /home/zanetti/WebCursos
 
-# Build para produção
-npm run build
-
-# Visualizar build de produção
-npm run preview
+# Construa e inicie os serviços
+docker-compose up -d
 ```
 
-### Ambos
-```bash
-# Parar servidores
-Ctrl + C  # Em cada terminal
+#### 5. Acesse a aplicação
 
-# Reiniciar aplicação completa
-# Terminal 1: cd backend && python app.py
-# Terminal 2: cd frontend && npm run dev
+Após a implantação, a aplicação estará disponível nos seguintes endereços:
+
+- **Frontend**: http://192.168.0.200:3000
+- **Backend API**: http://192.168.0.200:5000
+- **Portainer**: http://192.168.0.200:9000 (já disponível)
+
+#### 6. Configuração do Tailscale
+
+Como você já tem o Tailscale configurado no servidor, a aplicação será acessível de todos os seus PCs conectados à mesma rede Tailscale. Você pode acessar usando o IP do Tailscale do seu servidor.
+
+### 🔄 Comandos Úteis do Docker
+
+```bash
+# Ver status dos contêineres
+docker-compose ps
+
+# Ver logs
+docker-compose logs
+
+# Parar os serviços
+docker-compose down
+
+# Reconstruir e reiniciar
+docker-compose up -d --build
+
+# Ver logs em tempo real
+docker-compose logs -f
 ```
 
 ---
 
-## 🔍 Solução de Problemas
+## 📡 Endpoints da API
 
-### Problemas Comuns
+A API RESTful do WebCurso oferece os seguintes endpoints:
 
-#### 1. "CORS Error" no navegador
-**Causa**: Backend não está rodando ou CORS mal configurado
-**Solução**:
-```bash
-# Verifique se o backend está rodando
-curl http://127.0.0.1:5000/api/health
+### Cursos
+- `GET /api/cursos` - Listar todos os cursos
+- `POST /api/cursos` - Criar um novo curso
+- `GET /api/cursos/<id>` - Obter detalhes de um curso específico
+- `PUT /api/cursos/<id>` - Atualizar um curso
+- `DELETE /api/cursos/<id>` - Deletar um curso
 
-# Se não estiver, inicie:
-cd backend && python app.py
-```
+### Aulas
+- `POST /api/cursos/<id>/aula` - Marcar/desmarcar aula como concluída
+- `POST /api/cursos/<id>/batch-aulas` - Atualizar múltiplas aulas em lote
 
-#### 2. "npm: command not found"
-**Causa**: Node.js não instalado
-**Solução**: Instale Node.js de [nodejs.org](https://nodejs.org/)
-
-#### 3. "python: command not found"
-**Causa**: Python não instalado ou não no PATH
-**Solução**: Instale Python de [python.org](https://python.org/) e adicione ao PATH
-
-#### 4. Erro "Address already in use"
-**Causa**: Porta já está sendo usada
-**Solução**:
-```bash
-# Windows - matar processo na porta 5000
-netstat -ano | findstr :5000
-taskkill /PID [PID] /F
-
-# Linux/macOS - matar processo na porta 5000
-lsof -ti:5000 | xargs kill -9
-```
-
-#### 5. Frontend não carrega dados
-**Causa**: Backend não está rodando ou URL incorreta
-**Verificação**:
-1. Confirme que backend está em `http://127.0.0.1:5000`
-2. Teste: `curl http://127.0.0.1:5000/api/cursos`
-3. Verifique console do navegador (F12)
+### Utilitários
+- `GET /api/health` - Verificação de saúde da API
+- `GET /api/stats` - Estatísticas gerais
 
 ---
 
-## 📚 Próximos Passos
+## 🛠️ Scripts de Inicialização
 
-Após configurar com sucesso:
+O projeto inclui scripts para facilitar a inicialização:
 
-1. **Explore a aplicação** usando o fluxo recomendado acima
-2. **Leia a documentação técnica** em `DEPLOYMENT.md`
-3. **Consulte detalhes do frontend** em `frontend/README.md`
-4. **Para produção**, veja `INSTALL.md` e `DEPLOYMENT.md`
+### Windows
+- `scripts\start.bat` - Inicia ambos backend e frontend
+- `scripts\start.ps1` - Versão PowerShell
+- `scripts\start-backend.ps1` - Apenas backend
+- `scripts\start-frontend.ps1` - Apenas frontend
 
----
-
-## 🎯 Resumo de Comandos Rápidos
-
-### Inicialização Rápida (Primeira Vez)
-```bash
-# Backend
-cd backend
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-python init_db.py
-python app.py
-
-# Frontend (novo terminal)
-cd frontend
-npm install
-npm run dev
-```
-
-### Execução Diária
-```bash
-# Backend
-cd backend && venv\Scripts\activate && python app.py
-
-# Frontend (novo terminal)  
-cd frontend && npm run dev
-```
-
-**🎉 Aplicação rodando em: `http://localhost:3000`**
+### Linux/macOS
+- Execute diretamente os comandos Python e npm
 
 ---
 
-*Desenvolvido com ❤️ - Sistema WebCurso para Gerenciamento de Cursos*
+## 📁 Estrutura do Projeto
+
+```
+WebCursos/
+├── backend/                 # API Flask
+│   ├── app.py              # Aplicação principal
+│   ├── database.py         # Gerenciamento de banco de dados
+│   ├── init_db.py          # Inicialização do banco de dados
+│   ├── requirements.txt    # Dependências Python
+│   └── instance/           # Banco de dados SQLite
+├── frontend/               # Aplicação Vue.js
+│   ├── src/                # Código fonte Vue
+│   ├── package.json        # Dependências Node.js
+│   └── vite.config.js      # Configuração do Vite
+├── scripts/                # Scripts de inicialização
+└── docker-compose.yml      # Orquestração Docker
+```
+
+---
+
+## 🔒 Segurança
+
+Para uso em produção, considere:
+
+1. **Configurar HTTPS** com Let's Encrypt
+2. **Definir variáveis de ambiente** para chaves secretas
+3. **Implementar autenticação** de usuários
+4. **Configurar um proxy reverso** (Nginx/Apache)
+5. **Fazer backup regular** do banco de dados
+
+---
+
+## 🤝 Contribuição
+
+1. Faça um fork do projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
+
+---
+
+## 📄 Licença
+
+Este projeto é licenciado sob a licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
+
+---
+
+## 📞 Contato
+
+Seu Nome - [@seu_perfil](https://twitter.com/seu_perfil) - seu.email@exemplo.com
+
+Link do Projeto: [https://github.com/seu_usuario/WebCurso](https://github.com/seu_usuario/WebCurso)

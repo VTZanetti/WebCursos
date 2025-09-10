@@ -9,7 +9,7 @@ export default defineConfig({
     host: true,  // Allow external connections
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'http://localhost:5001',
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path  // Keep the /api prefix

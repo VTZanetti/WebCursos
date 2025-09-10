@@ -23,7 +23,11 @@ CORS(app, resources={
             "http://localhost:5173",  # Vite default port
             "http://127.0.0.1:5173", # Alternative localhost
             "http://localhost:3000",  # Backup port
-            "http://127.0.0.1:3000"  # Backup alternative
+            "http://127.0.0.1:3000",  # Backup alternative
+            "http://localhost:3001",  # Current frontend port
+            "http://127.0.0.1:3001",  # Current frontend alternative
+            "http://localhost:3002",  # Current frontend port (vite dev)
+            "http://127.0.0.1:3002"   # Current frontend alternative (vite dev)
         ],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization", "Accept"]
@@ -758,27 +762,18 @@ def internal_error(error):
 # ===============================
 
 if __name__ == '__main__':
-    logger.info(f"Iniciando API WebCurso com banco de dados: {DATABASE_TYPE}")
+    # Check database configuration
+    from config import DATABASE_TYPE
+    logger.info(f"Starting WebCurso API with {DATABASE_TYPE.upper()} database")
     
-    print("🚀 Iniciando API do WebCurso...")
-    print("📊 Endpoints disponíveis:")
-    print("   GET    /api/cursos          - Listar cursos")
-    print("   POST   /api/cursos          - Criar curso")
-    print("   GET    /api/cursos/<id>     - Detalhes do curso")
-    print("   PUT    /api/cursos/<id>     - Atualizar curso")
-    print("   DELETE /api/cursos/<id>     - Deletar curso")
-    print("   POST   /api/cursos/<id>/aula - Controlar aulas concluídas")
-    print("   POST   /api/cursos/<id>/aulas/batch - Controlar múltiplas aulas concluídas")
-    print("   GET    /api/health          - Status da API")
-    print("   GET    /api/stats           - Estatísticas gerais")
-    print()
-    print("🌐 CORS habilitado para:")
-    print("   - http://localhost:5173")
-    print("   - http://127.0.0.1:5173")
-    print("   - http://localhost:3000")
-    print("   - http://127.0.0.1:3000")
-    print()
-    print(f"DB TYPE: {DATABASE_TYPE}")
-    print()
+    # Initialize database if needed
+    try:
+        from init_db import init_database
+        init_database()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {str(e)}")
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # Run the Flask application
+    # Make it accessible from outside the container
+    app.run(debug=False, host='0.0.0.0', port=5000)
