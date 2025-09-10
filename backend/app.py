@@ -22,12 +22,18 @@ CORS(app, resources={
         "origins": [
             "http://localhost:5173",  # Vite default port
             "http://127.0.0.1:5173", # Alternative localhost
-            "http://localhost:3000",  # Backup port
-            "http://127.0.0.1:3000",  # Backup alternative
-            "http://localhost:3001",  # Current frontend port
-            "http://127.0.0.1:3001",  # Current frontend alternative
-            "http://localhost:3002",  # Current frontend port (vite dev)
-            "http://127.0.0.1:3002"   # Current frontend alternative (vite dev)
+            "http://localhost:3000",  # Common port
+            "http://127.0.0.1:3000",  # Alternative
+            "http://localhost:3001",  # Frontend port
+            "http://127.0.0.1:3001",  # Alternative
+            "http://localhost:3002",  # Frontend port (vite dev)
+            "http://127.0.0.1:3002",  # Alternative
+            "http://localhost:3003",  # Backup port
+            "http://127.0.0.1:3003",  # Alternative
+            "http://localhost:3004",  # Backup port
+            "http://127.0.0.1:3004",  # Alternative
+            "http://localhost:8080",  # Alternative port
+            "http://127.0.0.1:8080"   # Alternative
         ],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization", "Accept"]
@@ -112,6 +118,80 @@ def get_aulas_concluidas_list(connection, curso_id):
         logger.error(f"Erro ao buscar lista de aulas concluídas para curso {curso_id}: {str(e)}")
         raise Exception(f"Erro ao consultar lista de aulas")
 
+def calcular_estimativas_tempo(curso):
+    """
+    Calcula estimativas de tempo baseadas na carga horária do curso.
+    """
+    try:
+        horas = curso.get('horas', 0) or 0
+        minutos = curso.get('minutos', 0) or 0
+        total_aulas = curso.get('total_aulas', 0) or 0
+        aulas_concluidas = curso.get('aulas_concluidas', 0) or 0
+        
+        # Converter tudo para minutos para cálculos
+        duracao_total_minutos = (horas * 60) + minutos
+        
+        # Calcular duração por aula em minutos
+        if total_aulas > 0 and duracao_total_minutos > 0:
+            duracao_por_aula_minutos = duracao_total_minutos / total_aulas
+        else:
+            duracao_por_aula_minutos = 0
+        
+        # Calcular tempo restante
+        aulas_restantes = max(0, total_aulas - aulas_concluidas)
+        tempo_restante_minutos = aulas_restantes * duracao_por_aula_minutos
+        
+        # Converter de volta para horas e minutos
+        def minutos_para_horas_minutos(total_minutos):
+            if total_minutos <= 0:
+                return {'horas': 0, 'minutos': 0}
+            h = int(total_minutos // 60)
+            m = int(total_minutos % 60)
+            return {'horas': h, 'minutos': m}
+        
+        # Adicionar campos calculados
+        curso['duracao_total'] = {
+            'horas': horas,
+            'minutos': minutos,
+            'total_minutos': duracao_total_minutos
+        }
+        
+        curso['duracao_por_aula'] = minutos_para_horas_minutos(duracao_por_aula_minutos)
+        curso['duracao_por_aula']['total_minutos'] = duracao_por_aula_minutos
+        
+        curso['tempo_restante'] = minutos_para_horas_minutos(tempo_restante_minutos)
+        curso['tempo_restante']['total_minutos'] = tempo_restante_minutos
+        
+        # Formatacao amigável
+        def formatar_duracao(duracao_obj):
+            h = duracao_obj['horas']
+            m = duracao_obj['minutos']
+            if h > 0 and m > 0:
+                return f"{h}h {m}min"
+            elif h > 0:
+                return f"{h}h"
+            elif m > 0:
+                return f"{m}min"
+            else:
+                return "0min"
+        
+        curso['duracao_total_formatada'] = formatar_duracao(curso['duracao_total'])
+        curso['duracao_por_aula_formatada'] = formatar_duracao(curso['duracao_por_aula'])
+        curso['tempo_restante_formatado'] = formatar_duracao(curso['tempo_restante'])
+        
+        return curso
+        
+    except Exception as e:
+        logger.error(f"Erro ao calcular estimativas de tempo: {str(e)}")
+        # Retornar valores padrão em caso de erro
+        curso['duracao_total'] = {'horas': 0, 'minutos': 0, 'total_minutos': 0}
+        curso['duracao_por_aula'] = {'horas': 0, 'minutos': 0, 'total_minutos': 0}
+        curso['tempo_restante'] = {'horas': 0, 'minutos': 0, 'total_minutos': 0}
+        curso['duracao_total_formatada'] = '0min'
+        curso['duracao_por_aula_formatada'] = '0min'
+        curso['tempo_restante_formatado'] = '0min'
+        return curso
+
 # ===============================
 # ENDPOINTS DA API RESTful
 # ===============================
@@ -127,7 +207,7 @@ def get_cursos():
         conn = get_db_connection()
         
         # Buscar todos os cursos
-        query = "SELECT id, titulo, link, total_aulas, anotacoes, created_at, updated_at FROM cursos ORDER BY created_at DESC"
+        query = "SELECT id, titulo, link, total_aulas, anotacoes, horas, minutos, created_at, updated_at FROM cursos ORDER BY created_at DESC"
         cursos_data = db_manager.execute_query(conn, query, fetch_all=True)
         
         cursos = []
@@ -139,6 +219,9 @@ def get_cursos():
                 curso['progresso'] = round((curso['aulas_concluidas'] / curso['total_aulas']) * 100, 1)
             else:
                 curso['progresso'] = 0.0
+            
+            # Calcular estimativas de tempo
+            curso = calcular_estimativas_tempo(curso)
             
             cursos.append(curso)
         
@@ -202,10 +285,28 @@ def create_curso():
                 f"Valor recebido: {data['total_aulas']}"
             )
         
+        # Validar horas e minutos (opcionais)
+        horas = data.get('horas', 0)
+        minutos = data.get('minutos', 0)
+        
+        if horas is not None and (not isinstance(horas, int) or horas < 0):
+            return create_error_response(
+                "Horas deve ser um número inteiro não negativo",
+                400,
+                f"Valor recebido: {horas}"
+            )
+            
+        if minutos is not None and (not isinstance(minutos, int) or minutos < 0 or minutos >= 60):
+            return create_error_response(
+                "Minutos deve ser um número inteiro entre 0 e 59",
+                400,
+                f"Valor recebido: {minutos}"
+            )
+        
         conn = get_db_connection()
         
         # Inserir novo curso - simplified for SQLite
-        insert_query = "INSERT INTO cursos (titulo, link, total_aulas, anotacoes) VALUES (?, ?, ?, ?)"
+        insert_query = "INSERT INTO cursos (titulo, link, total_aulas, anotacoes, horas, minutos) VALUES (?, ?, ?, ?, ?, ?)"
         
         curso_id = db_manager.execute_query(
             conn,
@@ -214,7 +315,9 @@ def create_curso():
                 data['titulo'].strip(),
                 data.get('link', '').strip(),
                 data['total_aulas'],
-                data.get('anotacoes', '').strip()
+                data.get('anotacoes', '').strip(),
+                horas or 0,
+                minutos or 0
             )
         )
         
@@ -222,7 +325,7 @@ def create_curso():
         conn.commit()
         
         # Buscar o curso recém-criado para retornar
-        select_query = "SELECT id, titulo, link, total_aulas, anotacoes, created_at, updated_at FROM cursos WHERE id = ?"
+        select_query = "SELECT id, titulo, link, total_aulas, anotacoes, horas, minutos, created_at, updated_at FROM cursos WHERE id = ?"
         
         curso_row = db_manager.execute_query(conn, select_query, (curso_id,), fetch_one=True)
         
@@ -232,6 +335,9 @@ def create_curso():
         novo_curso = curso_row
         novo_curso['aulas_concluidas'] = 0
         novo_curso['progresso'] = 0.0
+        
+        # Calcular estimativas de tempo
+        novo_curso = calcular_estimativas_tempo(novo_curso)
         
         logger.info(f"Curso criado com sucesso: ID {curso_id} - {data['titulo']}")
         
@@ -264,7 +370,7 @@ def get_curso(curso_id):
         conn = get_db_connection()
         
         # Buscar o curso
-        query = "SELECT id, titulo, link, total_aulas, anotacoes, created_at, updated_at FROM cursos WHERE id = ?"
+        query = "SELECT id, titulo, link, total_aulas, anotacoes, horas, minutos, created_at, updated_at FROM cursos WHERE id = ?"
         curso_row = db_manager.execute_query(conn, query, (curso_id,), fetch_one=True)
         
         if not curso_row:
@@ -280,6 +386,9 @@ def get_curso(curso_id):
             curso['progresso'] = round((curso['aulas_concluidas'] / curso['total_aulas']) * 100, 1)
         else:
             curso['progresso'] = 0.0
+            
+        # Calcular estimativas de tempo
+        curso = calcular_estimativas_tempo(curso)
         
         conn.close()
         return create_success_response(curso)
@@ -343,6 +452,24 @@ def update_curso(curso_id):
         if 'anotacoes' in data:
             update_fields.append('anotacoes = ?')
             update_values.append(data['anotacoes'])
+            
+        if 'horas' in data:
+            if not isinstance(data['horas'], int) or data['horas'] < 0:
+                return jsonify({
+                    'success': False,
+                    'error': 'horas deve ser um número inteiro não negativo'
+                }), 400
+            update_fields.append('horas = ?')
+            update_values.append(data['horas'])
+            
+        if 'minutos' in data:
+            if not isinstance(data['minutos'], int) or data['minutos'] < 0 or data['minutos'] >= 60:
+                return jsonify({
+                    'success': False,
+                    'error': 'minutos deve ser um número inteiro entre 0 e 59'
+                }), 400
+            update_fields.append('minutos = ?')
+            update_values.append(data['minutos'])
         
         if not update_fields:
             return jsonify({
@@ -365,7 +492,7 @@ def update_curso(curso_id):
         # Buscar e retornar o curso atualizado
         cursor = conn.cursor()  # Create a new cursor for the next query
         cursor.execute('''
-            SELECT id, titulo, link, total_aulas, anotacoes, created_at, updated_at
+            SELECT id, titulo, link, total_aulas, anotacoes, horas, minutos, created_at, updated_at
             FROM cursos 
             WHERE id = ?
         ''', (curso_id,))
@@ -378,6 +505,9 @@ def update_curso(curso_id):
             curso_atualizado['progresso'] = round((curso_atualizado['aulas_concluidas'] / curso_atualizado['total_aulas']) * 100, 1)
         else:
             curso_atualizado['progresso'] = 0.0
+            
+        # Calcular estimativas de tempo
+        curso_atualizado = calcular_estimativas_tempo(curso_atualizado)
             
         cursor.close()
         conn.close()

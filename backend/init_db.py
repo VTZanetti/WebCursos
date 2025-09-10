@@ -25,6 +25,8 @@ def init_database():
             link TEXT,
             total_aulas INTEGER NOT NULL DEFAULT 0,
             anotacoes TEXT,
+            horas INTEGER DEFAULT 0,
+            minutos INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -41,6 +43,19 @@ def init_database():
             UNIQUE(curso_id, numero_aula)
         )
     ''')
+    
+    # Adicionar colunas de horas e minutos se não existirem (migração)
+    try:
+        cursor.execute('ALTER TABLE cursos ADD COLUMN horas INTEGER DEFAULT 0')
+        print("Coluna 'horas' adicionada com sucesso")
+    except sqlite3.OperationalError:
+        pass  # Coluna já existe
+    
+    try:
+        cursor.execute('ALTER TABLE cursos ADD COLUMN minutos INTEGER DEFAULT 0')
+        print("Coluna 'minutos' adicionada com sucesso")
+    except sqlite3.OperationalError:
+        pass  # Coluna já existe
     
     # Criar índices para melhor performance
     cursor.execute('''
@@ -66,14 +81,14 @@ def init_database():
     if cursor.fetchone()[0] == 0:
         print("\nInserindo dados de exemplo...")
         cursor.execute('''
-            INSERT INTO cursos (titulo, link, total_aulas, anotacoes)
-            VALUES (?, ?, ?, ?)
-        ''', ('Curso de Python Avançado', 'https://exemplo.com/python', 30, 'Curso excelente para backend'))
+            INSERT INTO cursos (titulo, link, total_aulas, anotacoes, horas, minutos)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', ('Curso de Python Avançado', 'https://exemplo.com/python', 30, 'Curso excelente para backend', 15, 30))
         
         cursor.execute('''
-            INSERT INTO cursos (titulo, link, total_aulas, anotacoes)
-            VALUES (?, ?, ?, ?)
-        ''', ('Curso de Vue.js', 'https://exemplo.com/vue', 25, 'Framework frontend moderno'))
+            INSERT INTO cursos (titulo, link, total_aulas, anotacoes, horas, minutos)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', ('Curso de Vue.js', 'https://exemplo.com/vue', 25, 'Framework frontend moderno', 12, 0))
         
         # Marcar algumas aulas como concluídas
         cursor.execute('''

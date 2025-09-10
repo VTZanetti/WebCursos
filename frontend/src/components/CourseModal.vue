@@ -50,6 +50,53 @@
           </span>
         </div>
 
+        <div class="form-row">
+          <div class="form-group form-group-half">
+            <label for="horas" class="form-label">
+              Horas
+            </label>
+            <input
+              id="horas"
+              v-model.number="form.horas"
+              type="number"
+              class="form-input"
+              :class="{ 'input-error': errors.horas }"
+              placeholder="Ex: 15"
+              min="0"
+              max="999"
+            />
+            <span v-if="errors.horas" class="error-message">
+              {{ errors.horas }}
+            </span>
+          </div>
+
+          <div class="form-group form-group-half">
+            <label for="minutos" class="form-label">
+              Minutos
+            </label>
+            <input
+              id="minutos"
+              v-model.number="form.minutos"
+              type="number"
+              class="form-input"
+              :class="{ 'input-error': errors.minutos }"
+              placeholder="Ex: 30"
+              min="0"
+              max="59"
+            />
+            <span v-if="errors.minutos" class="error-message">
+              {{ errors.minutos }}
+            </span>
+          </div>
+        </div>
+
+        <div v-if="estimativasPorAula" class="estimativas-info">
+          <div class="estimativas-item">
+            <span class="estimativas-label">🕒 Duração por aula:</span>
+            <span class="estimativas-value">{{ estimativasPorAula }}</span>
+          </div>
+        </div>
+
         <div class="form-group">
           <label for="link" class="form-label">
             Link do Curso
@@ -135,7 +182,9 @@ export default {
         titulo: '',
         total_aulas: null,
         link: '',
-        anotacoes: ''
+        anotacoes: '',
+        horas: 0,
+        minutos: 0
       },
       errors: {},
       isLoading: false
@@ -150,6 +199,33 @@ export default {
              this.form.total_aulas && 
              this.form.total_aulas > 0 &&
              Object.keys(this.errors).length === 0
+    },
+    estimativasPorAula() {
+      if (!this.form.total_aulas || this.form.total_aulas <= 0) {
+        return null
+      }
+      
+      const horas = this.form.horas || 0
+      const minutos = this.form.minutos || 0
+      const totalMinutos = (horas * 60) + minutos
+      
+      if (totalMinutos <= 0) {
+        return null
+      }
+      
+      const minutosPorAula = totalMinutos / this.form.total_aulas
+      const horasPorAula = Math.floor(minutosPorAula / 60)
+      const minutosRestantes = Math.round(minutosPorAula % 60)
+      
+      if (horasPorAula > 0 && minutosRestantes > 0) {
+        return `${horasPorAula}h ${minutosRestantes}min`
+      } else if (horasPorAula > 0) {
+        return `${horasPorAula}h`
+      } else if (minutosRestantes > 0) {
+        return `${minutosRestantes}min`
+      } else {
+        return "< 1min"
+      }
     }
   },
   watch: {
@@ -174,6 +250,12 @@ export default {
     },
     'form.link'() {
       this.validateField('link')
+    },
+    'form.horas'() {
+      this.validateField('horas')
+    },
+    'form.minutos'() {
+      this.validateField('minutos')
     }
   },
   methods: {
@@ -182,7 +264,9 @@ export default {
         titulo: '',
         total_aulas: null,
         link: '',
-        anotacoes: ''
+        anotacoes: '',
+        horas: 0,
+        minutos: 0
       }
       this.errors = {}
       this.isLoading = false
@@ -194,7 +278,9 @@ export default {
           titulo: this.curso.titulo || '',
           total_aulas: this.curso.total_aulas || null,
           link: this.curso.link || '',
-          anotacoes: this.curso.anotacoes || ''
+          anotacoes: this.curso.anotacoes || '',
+          horas: this.curso.horas || 0,
+          minutos: this.curso.minutos || 0
         }
       }
     },
@@ -227,6 +313,18 @@ export default {
             this.errors[fieldName] = 'URL inválida'
           }
           break;
+          
+        case 'horas':
+          if (this.form.horas !== null && this.form.horas !== '' && this.form.horas !== 0 && (this.form.horas < 0 || this.form.horas > 999)) {
+            this.errors[fieldName] = 'Horas deve ser entre 0 e 999'
+          }
+          break;
+          
+        case 'minutos':
+          if (this.form.minutos !== null && this.form.minutos !== '' && this.form.minutos !== 0 && (this.form.minutos < 0 || this.form.minutos >= 60)) {
+            this.errors[fieldName] = 'Minutos deve ser entre 0 e 59'
+          }
+          break;
       }
     },
     
@@ -234,6 +332,8 @@ export default {
       this.validateField('titulo')
       this.validateField('total_aulas')
       this.validateField('link')
+      this.validateField('horas')
+      this.validateField('minutos')
       
       return Object.keys(this.errors).length === 0
     },
@@ -259,7 +359,9 @@ export default {
           titulo: this.form.titulo.trim(),
           total_aulas: parseInt(this.form.total_aulas),
           link: this.form.link.trim(),
-          anotacoes: this.form.anotacoes.trim()
+          anotacoes: this.form.anotacoes.trim(),
+          horas: this.form.horas || 0,
+          minutos: this.form.minutos || 0
         }
         
         this.$emit('save', formData)
@@ -342,6 +444,56 @@ export default {
 
 .form-group {
   margin-bottom: 20px;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.form-group-half {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.estimativas-info {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.dark-mode .estimativas-info {
+  background: #2d3748;
+  border-color: #4a5568;
+}
+
+.estimativas-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.estimativas-label {
+  font-weight: 500;
+  color: #4a5568;
+  font-size: 0.875rem;
+}
+
+.dark-mode .estimativas-label {
+  color: #a0aec0;
+}
+
+.estimativas-value {
+  font-weight: 600;
+  color: #2b6cb0;
+  font-size: 0.875rem;
+}
+
+.dark-mode .estimativas-value {
+  color: #63b3ed;
 }
 
 .form-label {
