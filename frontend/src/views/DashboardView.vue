@@ -282,9 +282,9 @@ export default {
           this.showNotification('Curso atualizado com sucesso!', 'success')
         } else {
           // Criar novo curso
-          console.log('Criando curso com dados:', cursoData)
+          console.log('🆕 Criando curso com dados:', cursoData)
           const response = await apiService.createCurso(cursoData)
-          console.log('Resposta da criação:', response)
+          console.log('🆕 Resposta da criação:', response)
           
           // Verificar a estrutura da resposta
           if (response && response.data) {
@@ -292,9 +292,14 @@ export default {
             const novoCurso = response.data
             this.cursos.unshift(novoCurso)
             this.showNotification('Curso criado com sucesso!', 'success')
+          } else if (response) {
+            // Se a resposta for diretamente o curso (sem envolvimento em data)
+            const novoCurso = response
+            this.cursos.unshift(novoCurso)
+            this.showNotification('Curso criado com sucesso!', 'success')
           } else {
-            console.error('Resposta inesperada da API:', response)
-            this.showNotification('Erro inesperado ao criar curso', 'error')
+            console.error('❌ Resposta inesperada da API:', response)
+            this.showNotification('Erro inesperado: resposta vazia da API', 'error')
           }
         }
         
@@ -304,11 +309,20 @@ export default {
         await this.loadStats()
         
       } catch (error) {
-        console.error('Erro ao salvar curso:', error)
-        this.showNotification(
-          error.message || 'Erro ao salvar curso', 
-          'error'
-        )
+        console.error('❌ Erro detalhado ao salvar curso:', {
+          error,
+          message: error.message,
+          stack: error.stack,
+          isEditing: this.selectedCurso?.id ? 'sim' : 'não',
+          cursoData
+        })
+        
+        let errorMessage = 'Erro ao salvar curso'
+        if (error.message) {
+          errorMessage = error.message
+        }
+        
+        this.showNotification(errorMessage, 'error')
       }
     },
 

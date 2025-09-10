@@ -98,9 +98,19 @@ export const apiService = {
   // Criar novo curso
   async createCurso(cursoData) {
     try {
+      console.log('📤 Enviando dados para criar curso:', cursoData)
       const response = await api.post('/cursos', cursoData)
+      console.log('📥 Resposta da criação do curso:', response)
       return response.data
     } catch (error) {
+      console.error('❌ Erro detalhado na criação do curso:', {
+        error,
+        status: error.status,
+        userMessage: error.userMessage,
+        serverMessage: error.serverMessage,
+        originalError: error.originalError
+      })
+      
       if (error.status === 400) {
         const message = error.serverMessage || 'Dados do curso inválidos'
         throw new Error(message)
